@@ -483,3 +483,91 @@ input:focus {
         transform: scale(1);
     }
 }
+
+/* ===== 气泡提示样式 ===== */
+.bubble-tip {
+    position: fixed;
+    bottom: calc(30px + 60px + 10px); /* 在图标上方10像素 */
+    right: 30px;
+    background-color: rgba(255, 255, 255, 0.95);
+    color: #ef71aa;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    line-height: 1.4;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.15);
+    z-index: 10000;
+    display: none;
+    cursor: pointer;
+    text-align: center;
+    border: 1px solid #ef71aa;
+    font-weight: bold;
+    
+    /* 动画设置 */
+    transform-origin: bottom right;
+    animation: bubbleAppear 0.5s ease-out forwards;
+    will-change: transform, opacity; /* 优化性能 */
+}
+
+/* 隐藏状态动画 */
+.bubble-tip.hide {
+    animation: bubbleDisappear 0.5s ease-out forwards;
+}
+
+/* 气泡弹出动画 */
+@keyframes bubbleAppear {
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* 气泡消失动画（对称效果） */
+@keyframes bubbleDisappear {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+    100% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+}
+
+/* 悬停效果 */
+.bubble-tip:hover {
+    opacity: 0.9;
+    transform: translateY(-2px); /* 轻微上浮效果 */
+    transition: transform 0.2s ease;
+}
+
+/* 气泡尾部（可选） */
+.bubble-tip::after {
+    content: "";
+    position: absolute;
+    bottom: -8px;
+    right: 20px;
+    border-width: 8px 5px 0;
+    border-style: solid;
+    border-color: rgba(255, 255, 255, 0.95) transparent transparent;
+    transform-origin: top;
+}
+
+/* ===== 响应式优化 ===== */
+@media (max-width: 480px) {
+    .bubble-tip {
+        right: 15px;
+        bottom: calc(20px + 50px + 10px);
+        max-width: 160px;
+    }
+}

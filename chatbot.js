@@ -30,6 +30,43 @@ document.addEventListener('DOMContentLoaded', () => {
     svgIcon.className = 'chat-svg-icon';
     chatIcon.appendChild(svgIcon);
     document.body.appendChild(chatIcon);
+    const bubbleTip = document.createElement('div');
+    bubbleTip.className = 'bubble-tip';
+    bubbleTip.innerHTML = '好无聊~ ╮(╯▽╰)╭<br/>快点击信息框来找桃妹聊天吧！';
+    chatIcon.appendChild(bubbleTip);
+    
+    let bubbleTimer = null;
+    let bubbleVisible = false;
+    
+    function showBubble() {
+    // 检查聊天窗口是否关闭
+    const isChatClosed = chatWindow.style.display !== 'flex';
+    
+    if (!bubbleVisible && isChatClosed) {
+        bubbleTip.style.display = 'block';
+        bubbleVisible = true;
+        
+        // 10秒后自动隐藏
+        setTimeout(() => {
+            if (bubbleVisible) {
+                bubbleTip.style.display = 'none';
+                bubbleVisible = false;
+            }
+        }, 10000);
+    }
+}
+    // 点击气泡任意地方立即隐藏
+    bubbleTip.addEventListener('click', () => {
+        bubbleTip.style.display = 'none';
+        bubbleVisible = false;
+        
+        // 重新开始两分钟计时
+        clearInterval(bubbleTimer);
+        bubbleTimer = setInterval(showBubble, 120000);
+    });
+    
+    // 初始启动定时器
+    bubbleTimer = setInterval(showBubble, 120000);
     
     const chatWindow = document.createElement('div');
     chatWindow.id = 'chatWindow';
@@ -889,6 +926,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const isVisible = chatWindow.style.display === 'flex';
             chatIcon.style.transform = isVisible ? 'none' : 'rotate(15deg)';
             chatWindow.style.display = isVisible ? 'none' : 'flex';
+            
+            // 打开窗口时立即隐藏气泡
+            if (!isVisible) {
+                bubbleTip.style.display = 'none';
+                bubbleVisible = false;
+            }
         });
         
         // 登录按钮事件 (整合管理员验证)
