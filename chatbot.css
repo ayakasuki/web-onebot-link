@@ -490,7 +490,7 @@ input:focus {
     bottom: calc(30px + 60px + 10px); /* 在图标上方10像素 */
     right: 30px;
     background-color: rgba(255, 255, 255, 0.95);
-    color: #ef71aa;
+    color: #ba5a70;
     padding: 8px 12px;
     border-radius: 20px;
     font-size: 12px;
@@ -500,7 +500,7 @@ input:focus {
     display: none;
     cursor: pointer;
     text-align: center;
-    border: 1px solid #ef71aa;
+    border: 1px solid #ba5a70;
     font-weight: bold;
     
     /* 动画设置 */
