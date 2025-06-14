@@ -236,6 +236,69 @@ document.addEventListener('DOMContentLoaded', () => {
             messageArea.scrollTop = messageArea.scrollHeight;
         }
         
+                // 在全局变量区域添加
+        let typingIndicators = {}; // 存储所有正在显示的指示器 {messageId: indicatorId}
+        let typingTimeouts = {};   // 存储指示器的超时定时器
+        
+        // 在addMessage函数后添加新函数 - 创建打字指示器
+        function addTypingIndicator(messageId) {
+            const container = document.createElement('div');
+            container.id = `typing-indicator-${messageId}`;
+            container.className = 'message-container robot';
+            
+            const avatarContainer = document.createElement('div');
+            avatarContainer.className = 'avatar-container';
+            
+            const avatar = document.createElement('img');
+            avatar.className = 'avatar-img';
+            avatar.src = `https://q.qlogo.cn/g?b=qq&s=0&nk=${config.BOT_QQ}`;
+            avatarContainer.appendChild(avatar);
+            container.appendChild(avatarContainer);
+            
+            const contentContainer = document.createElement('div');
+            contentContainer.className = 'content-container';
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble typing-indicator';
+            
+            // 创建三个动画圆点
+            for (let i = 0; i < 3; i++) {
+                const dot = document.createElement('span');
+                dot.className = 'typing-dot';
+                bubble.appendChild(dot);
+            }
+            
+            contentContainer.appendChild(bubble);
+            container.appendChild(contentContainer);
+            messageArea.appendChild(container);
+            messageArea.scrollTop = messageArea.scrollHeight;
+            
+            // 设置2分钟超时
+            typingTimeouts[messageId] = setTimeout(() => {
+                removeTypingIndicator(messageId);
+                addSystemMessage('服务可能繁忙，可能会更长时间才能得到回复。请稍等，也可重复发送信息~');
+            }, 120000); // 2分钟
+            
+            return container.id;
+        }
+        
+        // 添加移除指示器的函数
+        function removeTypingIndicator(messageId) {
+            const indicatorId = typingIndicators[messageId];
+            if (indicatorId) {
+                const indicator = document.getElementById(indicatorId);
+                if (indicator) {
+                    indicator.remove();
+                }
+                delete typingIndicators[messageId];
+            }
+            
+            if (typingTimeouts[messageId]) {
+                clearTimeout(typingTimeouts[messageId]);
+                delete typingTimeouts[messageId];
+            }
+        }
+        
         function addSystemMessage(text) {
             const sysMsg = document.createElement('div');
             sysMsg.className = 'system-message';
@@ -411,6 +474,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         const data = JSON.parse(event.data);
                         console.log('[RECV] 收到消息', data);
                         
+                        // 检查是否有待处理的指示器
+                        const messageIds = Object.keys(typingIndicators);
+                        if (messageIds.length > 0) {
+                            // 移除最早的消息指示器
+                            const oldestMessageId = messageIds[0];
+                            removeTypingIndicator(oldestMessageId);
+                        }
+                        
                         if (data.echo) {
                             handleApiRequest(data);
                         }
@@ -472,6 +543,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateStatus('离线', '#ff4d4d');
                     addSystemMessage(`连接已断开 (代码: ${event.code}, 原因: ${event.reason || '无'})`);
                     stopHeartbeat();
+                    // 清除所有打字指示器
+                    Object.keys(typingIndicators).forEach(removeTypingIndicator);
+                    typingIndicators = {};
+                    typingTimeouts = {};
                     
                     if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
                         const delay = Math.min(30000, 1000 * Math.pow(2, reconnectAttempts));
@@ -692,9 +767,16 @@ document.addEventListener('DOMContentLoaded', () => {
         function sendMessage() {
             const message = messageInput.value.trim();
             if (!message || !socket) return;
+            // 生成唯一消息ID
+            const messageId = messageCounter++;
+            // 添加用户消息
+            addMessage(message, 'user');
+            
+            // 添加机器人打字指示器
+            const indicatorId = addTypingIndicator(messageId);
+            typingIndicators[messageId] = indicatorId;
             
             if (socket.readyState === WebSocket.OPEN) {
-                addMessage(message, 'user');
                 
                 try {
                     const messageId = messageCounter++;
