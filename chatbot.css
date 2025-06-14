@@ -1,0 +1,448 @@
+/* chatbot.css */
+#chatIcon {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 9999;
+    transition: transform 0.3s ease;
+}
+
+.chat-svg-icon {
+    width: 40px;
+    height: 40px;
+    filter: drop-shadow(0 0 2px rgba(0,0,0,0.3));
+}
+
+#chatWindow {
+    position: fixed;
+    bottom: 100px;
+    right: 30px;
+    width: 375px;
+    height: 45%;
+    background: white;
+    border-radius: 25px;
+    box-shadow: 0 5px 30px rgba(0,0,0,0.2);
+    display: none;
+    flex-direction: column;
+    z-index: 9998;
+    overflow: hidden;
+    resize: both;
+    min-width: 300px;
+    min-height: 300px;
+}
+
+/* 竖屏样式 */
+@media only screen and (orientation: portrait) {
+    #chatWindow {
+        /* 调整窗口大小和位置 */
+        width: 70% !important; /* 让窗口宽度占据屏幕大部分，但留白 */
+        right: 5% !important; /* 居中 */
+        bottom: 80px; /* 适当调整位置 */
+        height: 50%; /* 高度适当调整 */
+        min-width: unset; /* 取消最小宽度限制，因为手机屏幕小 */
+        min-height: unset; /* 同样，最小高度也取消或者设置一个较小的值 */
+    }
+
+    .input-group {
+        padding: 2%; /* 减少内边距，让内部空间更大 */
+        flex-wrap: nowrap; /* 确保不换行 */
+    }
+
+    .message-input {
+        flex: 1; /* 输入框占据剩余空间 */
+        padding: 8px; /* 适当减小内边距 */
+        width: 70%; /* 或者设置一个固定比例，但使用flex:1更好 */
+    }
+
+    .send-button {
+        padding: 8px 12px; /* 减小按钮内边距 */
+        white-space: nowrap; /* 防止按钮文字换行 */
+        width: auto; /* 宽度自适应 */
+    }
+    .message-bubble {
+        font-size: 10px;  /* PC端基础字体 */
+        line-height: 1.4; /* 优化行高 */
+        padding: 10px 15px;
+        border-radius: 18px;
+        background: #f1f0f0;
+        color: black;
+        border-radius: 20px;
+        word-break: break-word;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+}
+
+.resize-handle {
+    display: none;
+}
+
+.resize-corner {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    z-index: 10000;
+    background: transparent;
+}
+
+.resize-tl { top: 0; left: 0; cursor: nw-resize; }
+.resize-tr { top: 0; right: 0; cursor: ne-resize; }
+.resize-bl { bottom: 0; left: 0; cursor: sw-resize; }
+.resize-br { bottom: 0; right: 0; cursor: se-resize; }
+.chat-header {
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: #f9f9f9;
+    cursor: move;
+}
+
+#statusIndicator {
+    font-size: 12px;
+    color: #ff4d4d;
+    margin-right: 15px;
+}
+
+#messageArea {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    background: #f9f9f9;
+}
+
+/* ========== 关键修正：头像布局 ========== */
+.message-container {
+    display: flex;
+    margin-bottom: 15px;
+    max-width: 100%;
+}
+
+/* ===== 消息容器方向控制 ===== */
+/* 机器人消息：头像在左 */
+.message-container.robot {
+    flex-direction: row; 
+    align-items: flex-start;
+  }
+
+/* 用户消息：头像在右 */
+.message-container.user {
+    flex-direction: row-reverse;
+    align-items: flex-start;
+  }
+  
+
+/* ===== 头像容器修正 ===== */
+.avatar-container {
+    position: relative;
+    display: inline-block; /* 根据布局调整 */
+    width: 40px;        /* 固定尺寸替代百分比 */
+    height: 40px;       /* 固定尺寸替代百分比 */
+    flex-shrink: 0;     /* 禁止压缩 */
+    margin: 0 10px;     /* 呼吸空间 */
+    position: relative; /* 启用定位 */
+  }
+
+/* ===== 头像图片样式 ===== */
+.avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%; 
+    object-fit: cover;  /* 保持比例 */
+    border: 1px solid #eee; 
+  }
+
+/* ===== 内容区域限制 ===== */
+.content-container {
+    max-width: calc(100% - 60px); /* 预留头像空间 */
+  }
+
+.message-bubble {
+    font-size: 14px;  /* PC端基础字体 */
+    line-height: 1.4; /* 优化行高 */
+    padding: 10px 15px;
+    border-radius: 18px;
+    background: #f1f0f0;
+    color: black;
+    border-radius: 20px;
+    word-break: break-word;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* ===== 气泡特殊样式 ===== */
+/* 用户气泡右圆角 */
+.user .message-bubble {
+    border-radius: 18px 18px 0 18px;
+  }
+/* ========== 修正结束 ========== */
+
+/* 聚焦状态保持椭圆样式 */
+.login-form input:focus, 
+#messageInput:focus {
+    border-radius: 20px; /* 保持椭圆形状 */
+    border-color: #ef71aa !important;
+    box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    margin: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.login-form input {
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+}
+
+.login-button {
+    padding: 10px;
+    background: #ef71aa;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+}
+
+.input-group {
+    display: none;
+    padding: 2% 5%;
+    gap: 2%;
+    background: #fff;
+    border-top: 1px solid #eee;
+}
+
+.message-input {
+    flex: 1;
+    padding: 2% 2%;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    outline: none;
+}
+
+.send-button {
+    padding: 2% 5%;
+    background: #ef71aa;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.system-message {
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+    margin: 10px 0;
+}
+
+button:hover {
+    opacity: 0.9;
+    transform: scale(1.02);
+    transition: all 0.2s ease;
+}
+
+input:focus {
+    border-color: #ef71aa !important;
+    box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+}
+
+/* 新增机器人头像样式 */
+.bot-avatar-container {
+    display: flex;
+    justify-content: center;
+    margin: 15px 0;
+  }
+  
+  .bot-avatar {
+    width: 40%;
+    aspect-ratio: 1/1; /* 保持正方形 */
+    border-radius: 50%;
+    border: 2px solid #ef71aa;
+    object-fit: cover;
+  }
+  
+  /* 欢迎消息样式 */
+  .welcome-message {
+    font-size: 12px;
+    color: #666;
+    text-align: center;
+    padding: 10px;
+    margin: 0 20px;
+    background: #f9f9f9;
+    border-radius: 10px;
+    line-height: 1.5;
+  }
+
+  .message-image {
+    transition: transform 0.3s;
+    cursor: pointer;
+  }
+  .message-image.zoomed {
+    transform: scale(2);
+    z-index: 1000;
+    position: relative;
+  }
+
+  /* 密码框专属样式 */
+.password-input {
+    margin-top: 8px;
+    transition: all 0.3s ease;
+  }
+  
+.admin-badge {
+    position: absolute;
+    top: 20px; /* 微调垂直位置 */
+    right: -5px; /* 微调水平位置 */
+    background: #ef71aa;
+    color: white;
+    font-size: 8px;
+    padding: 2px 0px; /* 增加左右内边距 */
+    border-radius: 10px;
+    z-index: 10; /* 确保显示在最上层 */
+    white-space: nowrap; /* 防止文本换行 */
+  }
+
+  /* 转发消息预览 */
+.forward-preview-container {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 12px;
+    margin: 8px 0;
+    background-color: #f9f9f9;
+    cursor: pointer;
+}
+
+.forward-preview-container:hover {
+    background-color: #f0f0f0;
+}
+
+.forward-preview-title {
+    font-weight: bold;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #666;
+}
+
+.forward-nodes-container {
+    max-height: 150px;
+    overflow: hidden;
+}
+
+.forward-preview-node {
+    display: flex;
+    align-items: center;
+    margin: 6px 0;
+}
+
+.forward-preview-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.forward-preview-text {
+    font-size: 14px;
+    color: #666;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 转发消息详情弹窗 */
+.forward-detail-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.forward-detail-content {
+    background-color: white;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 500px;
+    max-height: 80%;
+    overflow-y: auto;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    position: relative;
+}
+
+.forward-detail-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 24px;
+    cursor: pointer;
+    color: #999;
+}
+
+.forward-detail-close:hover {
+    color: #333;
+}
+
+.forward-detail-node {
+    margin-bottom: 20px;
+}
+
+.forward-detail-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.forward-detail-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.forward-detail-name {
+    font-weight: bold;
+}
+
+.forward-detail-messages {
+    margin-left: 38px;
+}
+
+.forward-detail-messages .message-bubble {
+    background-color: #e6f7ff;
+    border-radius: 18px;
+    padding: 8px 16px;
+    margin: 4px 0;
+    display: inline-block;
+    max-width: 80%;
+}
+
+.forward-detail-messages .message-image {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 8px;
+    margin: 4px 0;
+}
