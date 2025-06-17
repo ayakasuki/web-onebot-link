@@ -1,3 +1,103 @@
+/*日间夜间模式导航栏透明模糊*/
+[data-theme=light] #chatWindow {
+    background: rgba(255,255,255,0.3)!important;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);}
+
+[data-theme=light] .chat-header {
+    background: rgba(238, 245, 255, 0.5)!important;
+}
+
+[data-theme=light] #messageArea {
+    background: rgba(238, 245, 255, 0.7)!important;
+}
+
+[data-theme=light] .login-form {
+    background: rgba(238, 245, 255, 0.8)!important;
+}
+
+[data-theme=light] .login-button {
+    background: var(--btn-bg) !important;
+}
+
+[data-theme=light] .send-button {
+    background: var(--btn-bg) !important;
+    color: #ffffff;
+}
+
+[data-theme=light] .bubble-tip {
+    background: rgba(255, 255, 255, 0.9)!important;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    color: var(--btn-bg);
+}
+
+
+[data-theme=dark] #chatWindow {
+    background: rgba(30,30,30,.3)!important;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px)
+}
+
+[data-theme=dark] .chat-header {
+    background: rgba(102, 102, 102, 0.5)!important;
+}
+
+[data-theme=dark] #messageArea {
+    background: rgba(31, 31, 31, 0.7)!important;
+}
+
+[data-theme=dark] .login-form  {
+    background: rgba(31, 31, 31, 0.8)!important;
+}
+
+[data-theme=dark] .login-form input {
+    background: rgba(31, 31, 31, 0.8)!important;
+    color: #ffffff;
+}
+
+[data-theme=dark] .login-button {
+    background: var(--btn-color) !important;
+}
+
+[data-theme=dark] .welcome-message {
+    color: var(--btn-color) !important;
+}
+
+[data-theme=dark] .input-group {
+    background: rgba(31, 31, 31, 0.9)!important;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+}
+
+[data-theme=dark] .message-input{
+    background: rgba(31, 31, 31)!important;
+    color: #ffffff;
+}
+
+[data-theme=dark] .send-button{
+    background: var(--btn-color) !important;
+    color: #ffffff;
+}
+
+[data-theme=dark] .forward-detail-content{
+    background: rgba(31, 31, 31, 0.8)!important;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+}
+
+[data-theme=dark] .bubble-tip {
+    background: rgba(75, 79, 80, 0.9)!important;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    color: var(--btn-color);
+}
+
+[data-theme=dark] .bubble-.bubble-tip::after {
+    background: rgba(75, 79, 80, 0.9)!important;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+}
 /* chatbot.css */
 #chatIcon {
     position: fixed;
@@ -27,7 +127,7 @@
     right: 30px;
     width: 375px;
     height: 45%;
-    background: white;
+    background: var(--anzhiyu-post-blockquote-bg);
     border-radius: 25px;
     box-shadow: 0 5px 30px rgba(0,0,0,0.2);
     display: none;
@@ -286,7 +386,6 @@ input:focus {
     text-align: center;
     padding: 10px;
     margin: 0 20px;
-    background: #f9f9f9;
     border-radius: 10px;
     line-height: 1.5;
   }

@@ -339,8 +339,8 @@ document.addEventListener('DOMContentLoaded', () => {
         function addSystemMessage(text) {
             const sysMsg = document.createElement('div');
             sysMsg.className = 'system-message';
-            sysMsg.textContent = text;
-            messageArea.appendChild(sysMsg);
+            sysMsg.innerHTML = text; // 改为innerHTML
+            messageArea.appendChild(sysMsg);;
             messageArea.scrollTop = messageArea.scrollHeight;
             console.log(`[SYSTEM] ${text}`);
         }
@@ -980,7 +980,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'Enter') sendMessage();
         });
         
-        addSystemMessage('请设置你的QQ号以开始聊天');
+        addSystemMessage('请设置你的QQ号以开始聊天<br/>请不要担心，QQ号仅作为沟通唯一标识符<br/>因此不需要密码。');
         initResize();
     }
     
