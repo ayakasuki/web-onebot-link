@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 使用配置参数
-    const CHAT_ICON_SVG = '/diy/static/chatbot/message.svg';
+    const CHAT_ICON_SVG = 'https://cdn.ayakasuki.com/diy/static/chatbot/message.svg';
 
     // 创建UI元素
     const chatIcon = document.createElement('div');
@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const loginButton = document.createElement('button');
         loginButton.className = 'login-button';
-        loginButton.textContent = '登录';
+        loginButton.textContent = '创建对话';
         
         loginForm.appendChild(userQQInput);
         loginForm.appendChild(loginButton);
