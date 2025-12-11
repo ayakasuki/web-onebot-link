@@ -1,8 +1,10 @@
-/*日间夜间模式导航栏透明模糊*/
+/* chatbot.css - 修复机器人消息显示问题 */
+/* 日间夜间模式导航栏透明模糊 */
 [data-theme=light] #chatWindow {
     background: rgba(255,255,255,0.3)!important;
     -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);}
+    backdrop-filter: blur(8px);
+}
 
 [data-theme=light] .chat-header {
     background: rgba(238, 245, 255, 0.5)!important;
@@ -12,7 +14,11 @@
     background: rgba(238, 245, 255, 0.7)!important;
 }
 
-[data-theme=light] .login-form {
+[data-theme=light] .user-login-form {
+    background: rgba(238, 245, 255, 0.8)!important;
+}
+
+[data-theme=light] .admin-login-form {
     background: rgba(238, 245, 255, 0.8)!important;
 }
 
@@ -32,11 +38,10 @@
     color: var(--anzhiyu-main);
 }
 
-
 [data-theme=dark] #chatWindow {
-    background: rgba(30,30,30,.3)!important;
+    background: rgba(30,30,.3)!important;
     -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px)
+    backdrop-filter: blur(8px);
 }
 
 [data-theme=dark] .chat-header {
@@ -47,13 +52,19 @@
     background: rgba(31, 31, 31, 0.7)!important;
 }
 
-[data-theme=dark] .login-form  {
+[data-theme=dark] .user-login-form {
     background: rgba(31, 31, 31, 0.8)!important;
 }
 
-[data-theme=dark] .login-form input {
+[data-theme=dark] .admin-login-form {
+    background: rgba(31, 31, 31, 0.8)!important;
+}
+
+[data-theme=dark] .user-login-form input,
+[data-theme=dark] .admin-login-form input {
     background: rgba(31, 31, 31, 0.8)!important;
     color: #ffffff;
+    border: 1px solid #555;
 }
 
 [data-theme=dark] .login-button {
@@ -73,6 +84,7 @@
 [data-theme=dark] .message-input{
     background: rgba(31, 31, 31)!important;
     color: #ffffff;
+    border: 1px solid #555;
 }
 
 [data-theme=dark] .send-button{
@@ -88,17 +100,18 @@
 
 [data-theme=dark] .bubble-tip {
     background: rgba(75, 79, 80, 0.9)!important;
-    -webkit-backdrop-filter: blur(8px);
+   -backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
     color: var(--anzhiyu-main);
 }
 
-[data-theme=dark] .bubble-.bubble-tip::after {
+[data-theme=dark] .bubble-tip::after {
     background: rgba(75, 79, 80, 0.9)!important;
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
 }
-/* chatbot.css */
+
+/* chatbot.css 基础样式 */
 #chatIcon {
     position: fixed;
     bottom: 30px;
@@ -142,34 +155,34 @@
 /* 竖屏样式 */
 @media only screen and (orientation: portrait) {
     #chatWindow {
-        /* 调整窗口大小和位置 */
-        width: 70% !important; /* 让窗口宽度占据屏幕大部分，但留白 */
-        right: 5% !important; /* 居中 */
-        bottom: 80px; /* 适当调整位置 */
-        height: 50%; /* 高度适当调整 */
-        min-width: unset; /* 取消最小宽度限制，因为手机屏幕小 */
-        min-height: unset; /* 同样，最小高度也取消或者设置一个较小的值 */
+        width: 70% !important;
+        right: 5% !important;
+        bottom: 80px;
+        height: 50%;
+        min-width: unset;
+        min-height: unset;
     }
 
     .input-group {
-        padding: 2%; /* 减少内边距，让内部空间更大 */
-        flex-wrap: nowrap; /* 确保不换行 */
+        padding: 2%;
+        flex-wrap: nowrap;
     }
 
     .message-input {
-        flex: 1; /* 输入框占据剩余空间 */
-        padding: 8px; /* 适当减小内边距 */
-        width: 70%; /* 或者设置一个固定比例，但使用flex:1更好 */
+        flex: 1;
+        padding: 8px;
+        width: 70%;
     }
 
     .send-button {
-        padding: 8px 12px; /* 减小按钮内边距 */
-        white-space: nowrap; /* 防止按钮文字换行 */
-        width: auto; /* 宽度自适应 */
+        padding: 8px 12px;
+        white-space: nowrap;
+        width: auto;
     }
+    
     .message-bubble {
-        font-size: 10px;  /* PC端基础字体 */
-        line-height: 1.4; /* 优化行高 */
+        font-size: 10px;
+        line-height: 1.4;
         padding: 10px 15px;
         border-radius: 18px;
         background: #f1f0f0;
@@ -177,6 +190,26 @@
         border-radius: 20px;
         word-break: break-word;
         box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+    
+    /* 竖屏下的登录表单调整 */
+    .user-login-form,
+    .admin-login-form {
+        padding: 15px;
+        margin: 10px;
+    }
+    
+    .login-button, 
+    .admin-login-button,
+    .user-login-form input,
+    .admin-login-form input {
+        width: 90%;
+        padding: 8px 12px;
+    }
+    
+    .bot-avatar {
+        width: 80px;
+        height: 80px;
     }
 }
 
@@ -196,6 +229,8 @@
 .resize-tr { top: 0; right: 0; cursor: ne-resize; }
 .resize-bl { bottom: 0; left: 0; cursor: sw-resize; }
 .resize-br { bottom: 0; right: 0; cursor: se-resize; }
+
+/* 聊天窗口头部样式 - 保持原有布局 */
 .chat-header {
     border-bottom: 1px solid #eee;
     display: flex;
@@ -204,14 +239,74 @@
     padding: 15px;
     background: #f9f9f9;
     cursor: move;
+    min-height: 62px;
+    box-sizing: border-box;
+}
+
+.header-title-container {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.chat-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #4a5568;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    padding-right: 10px;
+}
+
+/* 修复：确保管理员入口按钮正确显示 */
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.admin-entry-button {
+    padding: 6px 12px;
+    background: var(--anzhiyu-main);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.3s;
+    white-space: nowrap;
+    min-width: 60px;
+    text-align: center;
+}
+
+.admin-entry-button:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 #statusIndicator {
     font-size: 12px;
     color: #ff4d4d;
-    margin-right: 15px;
+    font-weight: 500;
+    min-width: 40px;
+    text-align: center;
+    transition: color 0.3s ease;
 }
 
+#statusIndicator[style*="#4CAF50"] {
+    color: #48bb78 !important;
+}
+
+#statusIndicator[style*="#ff9800"] {
+    color: #ed8936 !important;
+}
+
+/* 消息区域样式 - 保持原有样式 */
 #messageArea {
     flex: 1;
     padding: 15px;
@@ -219,141 +314,203 @@
     display: flex;
     flex-direction: column;
     background: #f9f9f9;
+    justify-content: flex-start; /* 改为从顶部开始 */
+    min-height: 200px;
+    scroll-behavior: smooth; /* 平滑滚动 */
 }
 
-/* ========== 关键修正：头像布局 ========== */
+/* 消息容器布局 */
 .message-container {
     display: flex;
     margin-bottom: 15px;
     max-width: 100%;
+    opacity: 0;
+    animation: none; /* 移除初始动画 */
 }
 
-/* ===== 消息容器方向控制 ===== */
-/* 机器人消息：头像在左 */
-.message-container.robot {
-    flex-direction: row; 
-    align-items: flex-start;
-  }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 
-/* 用户消息：头像在右 */
+.message-container.robot {
+    flex-direction: row;
+    align-items: flex-start;
+    transform-origin: left center;
+    animation: robotMessageAppear 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
 .message-container.user {
     flex-direction: row-reverse;
     align-items: flex-start;
-  }
-  
+    transform-origin: right center;
+    animation: userMessageAppear 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+/* 机器人消息出现动画 - 从左侧出现 */
+@keyframes robotMessageAppear {
+    0% {
+        opacity: 0;
+        transform: translateX(-20px) scale(0.9);
+    }
+    70% {
+        opacity: 0.9;
+        transform: translateX(5px) scale(1.02);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
 
-/* ===== 头像容器修正 ===== */
+/* 用户消息出现动画 - 从右侧出现 */
+@keyframes userMessageAppear {
+    0% {
+        opacity: 0;
+        transform: translateX(20px) scale(0.9);
+    }
+    70% {
+        opacity: 0.9;
+        transform: translateX(-5px) scale(1.02);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
 .avatar-container {
     position: relative;
-    display: inline-block; /* 根据布局调整 */
-    width: 40px;        /* 固定尺寸替代百分比 */
-    height: 40px;       /* 固定尺寸替代百分比 */
-    flex-shrink: 0;     /* 禁止压缩 */
-    margin: 0 10px;     /* 呼吸空间 */
-    position: relative; /* 启用定位 */
-  }
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    margin: 0 10px;
+    position: relative;
+}
 
-/* ===== 头像图片样式 ===== */
 .avatar-img {
     width: 100%;
     height: 100%;
     border-radius: 50%; 
-    object-fit: cover;  /* 保持比例 */
-    border: 1px solid #eee; 
-  }
+    object-fit: cover;
+    border: 1px solid #eee;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
 
-/* ===== 内容区域限制 ===== */
 .content-container {
-    max-width: calc(100% - 60px); /* 预留头像空间 */
-  }
-
-.message-bubble {
-    font-size: 14px;  /* PC端基础字体 */
-    line-height: 1.4; /* 优化行高 */
-    padding: 10px 15px;
-    border-radius: 18px;
-    background: #f1f0f0;
-    color: black;
-    border-radius: 20px;
-    word-break: break-word;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-}
-
-/* ===== 气泡特殊样式 ===== */
-/* 用户气泡右圆角 */
-.user .message-bubble {
-    border-radius: 18px 18px 0 18px;
-  }
-/* ========== 修正结束 ========== */
-
-/* 聚焦状态保持椭圆样式 */
-.login-form input:focus, 
-#messageInput:focus {
-    border-radius: 20px; /* 保持椭圆形状 */
-    border-color: #ef71aa !important;
-    box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
-}
-
-.login-form {
+    max-width: calc(100% - 60px);
     display: flex;
     flex-direction: column;
-    padding: 20px;
-    background: white;
-    border-radius: 8px;
-    margin: 20px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
-.login-form input {
-    padding: 10px;
-    margin-bottom: 10px;
-    border: 1px solid #ddd;
-    border-radius: 20px;
+/* 消息气泡样式 - 修复机器人消息显示 */
+.message-bubble {
+    font-size: 14px;
+    line-height: 1.4;
+    padding: 10px 15px;
+    border-radius: 18px;
+    word-break: break-word;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
 }
 
-.login-button {
-    padding: 10px;
-    background: #ef71aa;
-    color: white;
-    border: none;
-    border-radius: 20px;
-    cursor: pointer;
+/* 消息气泡样式 - 直接定位在左右两侧 */
+.robot .message-bubble {
+    background: linear-gradient(135deg, #e6f7ff, #d1ecff) !important;
+    color: #333;
+    border-radius: 18px 18px 18px 0;
+    border: 1px solid rgba(230, 247, 255, 0.8);
+    margin-right: auto;
+    position: relative;
+    left: 0;
+    animation: none; /* 移除气泡单独动画 */
 }
 
+.user .message-bubble {
+    background: linear-gradient(135deg, #d1f4d3, #b8f2c5) !important;
+    color: #333;
+    border-radius: 18px 18px 0 18px;
+    border: 1px solid rgba(209, 244, 211, 0.8);
+    margin-left: auto;
+    position: relative;
+    right: 0;
+    animation: none; /* 移除气泡单独动画 */
+}
+
+/* 打字指示器样式 */
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 30px;
+    background: transparent !important;
+    box-shadow: none !important;
+    min-width: 60px;
+}
+
+.typing-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin: 0 3px;
+    background: #a0a0a0;
+    animation: typing-dot 1.4s infinite ease-in-out both;
+}
+
+.typing-dot:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.typing-dot:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes typing-dot {
+    0%, 80%, 100% {
+        transform: scale(0.5);
+    }
+    40% {
+        transform: scale(1);
+    }
+}
+
+/* 输入区域样式 - 确保图2的输入框和发送按钮正确显示 */
 .input-group {
     display: none;
-    padding: 2% 5%;
-    gap: 2%;
+    padding: 12px 15px;
+    gap: 8px;
     background: #fff;
     border-top: 1px solid #eee;
+    align-items: center;
 }
 
 .message-input {
     flex: 1;
-    padding: 2% 2%;
+    padding: 10px 15px;
     border: 1px solid #ddd;
     border-radius: 20px;
     outline: none;
+    font-size: 14px;
 }
 
 .send-button {
-    padding: 2% 5%;
+    padding: 10px 20px;
     background: #ef71aa;
     color: white;
     border: none;
     border-radius: 20px;
     cursor: pointer;
     transition: background 0.3s;
+    font-size: 14px;
+    min-width: 60px;
 }
 
-.system-message {
-    text-align: center;
-    color: #999;
-    font-size: 12px;
-    margin: 10px 0;
-}
-
-button:hover {
+.send-button:hover {
     opacity: 0.9;
     transform: scale(1.02);
     transition: all 0.2s ease;
@@ -364,23 +521,31 @@ input:focus {
     box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
 }
 
-/* 新增机器人头像样式 */
-.bot-avatar-container {
-    display: flex;
-    justify-content: center;
-    margin: 15px 0;
-  }
-  
-  .bot-avatar {
-    width: 40%;
-    aspect-ratio: 1/1; /* 保持正方形 */
-    border-radius: 50%;
-    border: 2px solid #ef71aa;
-    object-fit: cover;
-  }
-  
-  /* 欢迎消息样式 */
-  .welcome-message {
+/* 系统消息样式 */
+.system-message {
+    text-align: center;
+    color: #666;
+    font-size: 12px;
+    margin: 10px 0;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(0,0,0,0.05);
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+.system-message[style*="color: #f44336"] {
+    color: #fc8181 !important;
+    background: rgba(254, 178, 183, 0.1);
+    font-weight: 500;
+}
+
+.system-message[style*="color: #4CAF50"] {
+    color: #68d391 !important;
+}
+
+/* 欢迎消息样式 */
+.welcome-message {
     font-size: 12px;
     color: #666;
     text-align: center;
@@ -388,38 +553,428 @@ input:focus {
     margin: 0 20px;
     border-radius: 10px;
     line-height: 1.5;
-  }
+    background: rgba(0,0,0,0.05);
+}
 
-  .message-image {
+/* 用户登录表单样式 */
+.user-login-form {
+    display: none; /* 默认隐藏 */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.login-message {
+    color: #666;
+    margin-bottom: 15px;
+    font-size: 14px;
+}
+
+.login-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #ef71aa;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 10px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 管理员登录表单样式 - 这是图2的登录表单 */
+.admin-login-form {
+    display: none; /* 默认隐藏 */
+    flex-direction: column;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    margin: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    
+}
+
+.admin-login-form h4 {
+    margin: 0 0 15px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+.admin-input {
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    width: 80%;
+    max-width: 200px;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+    text-align: center;
+    font-size: 14px;
+    outline: none;
+}
+
+.admin-input:focus {
+    border-color: #ef71aa !important;
+    box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+}
+
+.admin-login-button {
+: 10px 20px;
+    background: linear-gradient(45deg, #ef71aa, #ff6b6b) !important;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: bold;
+    margin-top: 10px;
+    width: 80%;
+    max-width: 200px;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.admin-login-button:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.admin-login-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.admin-login-message {
+    color: #666;
+    font-size: 12px;
+    text-align: center;
+    margin-top: 10px;
+    padding: 5px;
+    border-radius: 5px;
+    width: 100%;
+    line-height: 1.4;
+}
+
+.chat-interface {
+    display: none; /* 默认隐藏 */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+    height: 100%;
+}
+
+/* 机器人头像容器 */
+.bot-avatar-container {
+    display: flex;
+    justify-content: center;
+    margin: 0 0 20px 0;
+    width: 100%;
+    flex-direction: column;
+    align-items: center;
+}
+  
+.bot-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 3px solid #ef71aa;
+    object-fit: cover;
+    display: block;
+    margin: 0 auto 10px;
+}
+
+/* 管理员徽章样式 */
+.admin-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: linear-gradient(45deg, #ef71aa, #ff6b6b);
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    z-index: 10;
+    white-space: nowrap;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* 管理员模式徽章 */
+.admin-mode-badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: #f44336;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    z-index: 10;
+    white-space: nowrap;
+    font-weight: bold;
+    display: none;
+}
+
+/* 密码输入框特定样式 */
+.password-input {
+    letter-spacing: 1px;
+    font-family: 'Courier New', monospace;
+}
+
+/* 图片和动画效果 */
+.message-image {
     transition: transform 0.3s;
     cursor: pointer;
-  }
-  .message-image.zoomed {
+    max-width: 200px;
+    max-height: 250px;
+    border-radius: 10px;
+    border: 1px solid #eee;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    display: block;
+    margin: 5px 0;
+}
+
+.message-image.zoomed {
     transform: scale(2);
     z-index: 1000;
     position: relative;
-  }
+    border-color: #ef71aa;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
 
-  /* 密码框专属样式 */
-.password-input {
-    margin-top: 8px;
-    transition: all 0.3s ease;
-  }
-  
-.admin-badge {
+/* 气泡提示样式 */
+.bubble-tip {
+    position: fixed;
+    bottom: calc(30px + 60px + 10px);
+    right: 30px;
+    background-color: rgba(255, 255, 255, 0.95);
+    color: #ba5a70;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    line-height: 1.4;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.15);
+    z-index: 10000;
+    display: none;
+    cursor: pointer;
+    text-align: center;
+    border: 1px solid #ba5a70;
+    font-weight: bold;
+    transform-origin: bottom right;
+    animation: bubbleAppear 0.5s ease-out forwards;
+    will-change: transform, opacity;
+    backdrop-filter: blur(8px);
+    max-width: 200px;
+}
+
+.bubble-tip.hide {
+    animation: bubbleDisappear 0.5s ease-out forwards;
+}
+
+@keyframes bubbleAppear {
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes bubbleDisappear {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+    100% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+}
+
+.bubble-tip:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+    transition: transform 0.2s ease;
+}
+
+.bubble-tip::after {
+    content: "";
     position: absolute;
-    top: 20px; /* 微调垂直位置 */
-    right: -5px; /* 微调水平位置 */
-    background: #ef71aa;
-    color: white;
-    font-size: 8px;
-    padding: 2px 0px; /* 增加左右内边距 */
-    border-radius: 10px;
-    z-index: 10; /* 确保显示在最上层 */
-    white-space: nowrap; /* 防止文本换行 */
-  }
+    bottom: -8px;
+    right: 20px;
+    border-width: 8px 5px 0;
+    border-style: solid;
+    border-color: rgba(255, 255, 255, 0.95) transparent transparent;
+    transform-origin: top;
+}
 
-  /* 转发消息预览 */
+@media (max-width: 480px) {
+    .bubble-tip {
+        right: 15px;
+        bottom: calc(20px + 50px + 10px);
+        max-width: 160px;
+    }
+    
+    #chatWindow {
+        width: 90% !important;
+        right: 5% !important;
+    }
+    
+    .chat-header h3 {
+        font-size: 16px;
+    }
+    
+    .admin-entry-button {
+        padding: 4px 8px;
+        font-size: 11px;
+        min-width: 50px;
+    }
+    
+    .message-input {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+    
+    .send-button {
+        padding: 8px 15px;
+        min-width: 50px;
+        font-size: 13px;
+    }
+}
+
+/* 添加管理员登录表单激活状态的特殊样式 */
+.admin-login-form.admin-form-active {
+    display: flex !important;
+    position: fixed; /* 使用fixed定位，覆盖整个消息区域 */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    z-index: 1000;
+    background: inherit;
+    border-radius: 0;
+    box-shadow: none;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 确保消息区域在显示管理员登录表单时不滚动 */
+#messageArea:has(.admin-login-form.admin-form-active) {
+    overflow: hidden;
+    position: relative;
+}
+
+/* 返回普通用户界面链接样式 */
+.switch-to-user-link {
+    color: #ef71aa;
+    font-size: 12px;
+    text-decoration: underline;
+    cursor: pointer;
+    margin-top: 15px;
+    transition: color 0.3s;
+    text-align: center;
+    width: 100%;
+    display: block;
+}
+
+.switch-to-user-link:hover {
+    color: #d86299;
+}
+
+/* 管理员错误弹窗动画 */
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translate(-50%, -20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translate(-50%, 0); 
+    }
+}
+
+@keyframes fadeOut {
+    from { 
+        opacity: 1; 
+        transform: translate(-50%, 0); 
+    }
+    to { 
+        opacity: 0; 
+        transform: translate(-50%, -20px); 
+    }
+}
+
+/* 连接状态颜色定义 */
+.status-connected {
+    color: #48bb78 !important;
+}
+
+.status-disconnected {
+    color: #f56565 !important;
+}
+
+.status-connecting {
+    color: #ed8936 !important;
+}
+
+.status-error {
+    color: #fc8181 !important;
+}
+
+/* 滚动条样式 */
+#messageArea::-webkit-scrollbar {
+    width: 6px;
+}
+
+#messageArea::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.05);
+    border-radius: 10px;
+}
+
+#messageArea::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.2);
+    border-radius: 10px;
+}
+
+#messageArea::-webkit-scrollbar-thumb:hover {
+    background: rgba(0,0,0,0.3);
+}
+
+
+/* 转发消息预览 */
 .forward-preview-container {
     border: 1px solid #e0e0e0;
     border-radius: 8px;
@@ -546,127 +1101,3 @@ input:focus {
     margin: 4px 0;
 }
 
-/* 打字指示器样式 */
-.typing-indicator {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 30px;
-    background: transparent !important;
-    box-shadow: none !important;
-}
-
-.typing-dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    margin: 0 3px;
-    background: #a0a0a0;
-    animation: typing-dot 1.4s infinite ease-in-out both;
-}
-
-.typing-dot:nth-child(1) {
-    animation-delay: -0.32s;
-}
-
-.typing-dot:nth-child(2) {
-    animation-delay: -0.16s;
-}
-
-@keyframes typing-dot {
-    0%, 80%, 100% {
-        transform: scale(0.5);
-    }
-    40% {
-        transform: scale(1);
-    }
-}
-
-/* ===== 气泡提示样式 ===== */
-.bubble-tip {
-    position: fixed;
-    bottom: calc(30px + 60px + 10px); /* 在图标上方10像素 */
-    right: 30px;
-    background-color: rgba(255, 255, 255, 0.95);
-    color: #ba5a70;
-    padding: 8px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    line-height: 1.4;
-    box-shadow: 0 2px 15px rgba(0,0,0,0.15);
-    z-index: 10000;
-    display: none;
-    cursor: pointer;
-    text-align: center;
-    border: 1px solid #ba5a70;
-    font-weight: bold;
-    
-    /* 动画设置 */
-    transform-origin: bottom right;
-    animation: bubbleAppear 0.5s ease-out forwards;
-    will-change: transform, opacity; /* 优化性能 */
-}
-
-/* 隐藏状态动画 */
-.bubble-tip.hide {
-    animation: bubbleDisappear 0.5s ease-out forwards;
-}
-
-/* 气泡弹出动画 */
-@keyframes bubbleAppear {
-    0% {
-        transform: scale(0.5);
-        opacity: 0;
-    }
-    50% {
-        opacity: 1;
-    }
-    100% {
-        transform: scale(1);
-        opacity: 1;
-    }
-}
-
-/* 气泡消失动画（对称效果） */
-@keyframes bubbleDisappear {
-    0% {
-        transform: scale(1);
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.5;
-    }
-    100% {
-        transform: scale(0.5);
-        opacity: 0;
-    }
-}
-
-/* 悬停效果 */
-.bubble-tip:hover {
-    opacity: 0.9;
-    transform: translateY(-2px); /* 轻微上浮效果 */
-    transition: transform 0.2s ease;
-}
-
-/* 气泡尾部（可选） */
-.bubble-tip::after {
-    content: "";
-    position: absolute;
-    bottom: -8px;
-    right: 20px;
-    border-width: 8px 5px 0;
-    border-style: solid;
-    border-color: rgba(255, 255, 255, 0.95) transparent transparent;
-    transform-origin: top;
-}
-
-/* ===== 响应式优化 ===== */
-@media (max-width: 480px) {
-    .bubble-tip {
-        right: 15px;
-        bottom: calc(20px + 50px + 10px);
-        max-width: 160px;
-    }
-}

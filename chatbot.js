@@ -8,28 +8,214 @@ document.addEventListener('DOMContentLoaded', () => {
       BOT_QQ: currentScript.dataset.botQq,
       BOT_NAME: currentScript.dataset.botName,
       WS_URL: currentScript.dataset.wsUrl,
-      MASTER_QQ: currentScript.dataset.masterQq,
-      MASTER_PASSWORD: currentScript.dataset.masterPassword
+      AUTH_API_URL: currentScript.dataset.authApiUrl 
     };
   
     // 验证必要参数
-    if (!config.BOT_QQ || !config.WS_URL || !config.BOT_NAME ) {
+    if (!config.BOT_QQ || !config.WS_URL || !config.BOT_NAME) {
       console.error('缺失机器人必要配置参数');
       return;
     }
 
     // 使用配置参数
     const CHAT_ICON_SVG = 'https://cdn.ayakasuki.com/diy/static/chatbot/message.svg';
+    
+    // 全局状态
+    let isAdminMode = false;
+    let authToken = localStorage.getItem('auth_token');
+    let userToken = localStorage.getItem('user_token');
+    let currentUserId = localStorage.getItem('user_id');
+    let currentAvatar = null;
+    try {
+        currentAvatar = JSON.parse(localStorage.getItem('user_avatar') || 'null');
+    } catch (e) {
+        currentAvatar = null;
+    }
+    let browserFingerprint = null;
+    let isInitialized = false;
+    let currentMasterQQ = null;
+
+    // 生成浏览器指纹
+    function generateBrowserFingerprint() {
+        const components = [
+            navigator.userAgent,
+            navigator.language,
+            screen.colorDepth,
+            screen.width + 'x' + screen.height,
+            new Date().getTimezoneOffset(),
+            !!navigator.cookieEnabled,
+            navigator.hardwareConcurrency || 'unknown',
+            navigator.platform
+        ];
+        
+        const data = components.join('|');
+        let hash = 0;
+        for (let i = 0; i < data.length; i++) {
+            const char = data.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash;
+        }
+        return Math.abs(hash).toString(16);
+    }
+
+    // 初始化用户会话
+    async function initUserSession() {
+        try {
+            if (!browserFingerprint) {
+                browserFingerprint = generateBrowserFingerprint();
+            }
+            
+            const timestamp = Date.now();
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            
+            if (userToken) {
+                headers['x-auth-token'] = userToken;
+            }
+            
+            console.log('正在初始化用户会话...', { 
+                fingerprint: browserFingerprint, 
+                timestamp: timestamp,
+                hasToken: !!userToken 
+            });
+            
+            const response = await fetch(`${config.AUTH_API_URL}/api/user/init`, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify({ 
+                    fingerprint: browserFingerprint, 
+                    timestamp: timestamp 
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP错误: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            console.log('用户初始化响应:', data);
+            
+            if (data.success) {
+                currentUserId = data.userId;
+                currentAvatar = data.avatar;
+                userToken = data.token;
+                
+                localStorage.setItem('user_token', userToken);
+                localStorage.setItem('user_id', currentUserId);
+                localStorage.setItem('user_avatar', JSON.stringify(currentAvatar));
+                
+                return {
+                    success: true,
+                    userId: currentUserId,
+                    avatar: currentAvatar,
+                    token: userToken,
+                    isNew: data.isNew
+                };
+            }
+            
+            return { success: false, message: data.message || '用户初始化失败' };
+        } catch (error) {
+            console.error('用户初始化失败:', error);
+            return { 
+                success: false, 
+                message: '网络请求失败: ' + error.message 
+            };
+        }
+    }
+
+    // 验证管理员令牌
+    async function verifyAdminToken() {
+        if (!authToken) return { valid: false };
+        
+        try {
+            const response = await fetch(`${config.AUTH_API_URL}/auth/verify?token=${authToken}`);
+            if (!response.ok) return { valid: false };
+            
+            const data = await response.json();
+            if (data.valid) {
+                isAdminMode = true;
+                return { 
+                    valid: true, 
+                    account: data.account,
+                    realMasterQQ: data.realMasterQQ 
+                };
+            }
+        } catch (error) {
+            console.error('管理员验证失败:', error);
+        }
+        
+        localStorage.removeItem('auth_token');
+        authToken = null;
+        return { valid: false };
+    }
+
+    // 管理员登录
+    async function adminLogin(account, password) {
+        try {
+            const response = await fetch(`${config.AUTH_API_URL}/auth/master`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify({ account, password })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP错误: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                authToken = data.token;
+                localStorage.setItem('auth_token', authToken);
+                isAdminMode = true;
+                
+                return { 
+                    success: true, 
+                    token: authToken,
+                    realMasterQQ: data.realMasterQQ 
+                };
+            }
+            
+            return { success: false, message: data.message || '账号或密码错误' };
+        } catch (error) {
+            console.error('管理员登录失败:', error);
+            return { 
+                success: false, 
+                message: '登录失败: ' + error.message 
+            };
+        }
+    }
+
+    // 管理员注销
+    function adminLogout() {
+        if (authToken) {
+            fetch(`${config.AUTH_API_URL}/auth/logout`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: authToken })
+            }).catch(error => console.error('注销请求失败:', error));
+        }
+        
+        authToken = null;
+        isAdminMode = false;
+        localStorage.removeItem('auth_token');
+    }
 
     // 创建UI元素
     const chatIcon = document.createElement('div');
     chatIcon.id = 'chatIcon';
+    
     const svgIcon = document.createElement('img');
     svgIcon.src = CHAT_ICON_SVG;
     svgIcon.alt = '聊天图标';
     svgIcon.className = 'chat-svg-icon';
     chatIcon.appendChild(svgIcon);
+    
     document.body.appendChild(chatIcon);
+    
     const bubbleTip = document.createElement('div');
     bubbleTip.className = 'bubble-tip';
     bubbleTip.innerHTML = '好无聊~ ╮(╯▽╰)╭<br/>快点击信息框来找桃妹聊天吧！';
@@ -39,33 +225,29 @@ document.addEventListener('DOMContentLoaded', () => {
     let bubbleVisible = false;
     
     function showBubble() {
-    // 检查聊天窗口是否关闭
-    const isChatClosed = chatWindow.style.display !== 'flex';
-    
-    if (!bubbleVisible && isChatClosed) {
-        bubbleTip.style.display = 'block';
-        bubbleVisible = true;
+        const isChatClosed = chatWindow.style.display !== 'flex';
         
-        // 10秒后自动隐藏
-        setTimeout(() => {
-            if (bubbleVisible) {
-                bubbleTip.style.display = 'none';
-                bubbleVisible = false;
-            }
-        }, 10000);
+        if (!bubbleVisible && isChatClosed) {
+            bubbleTip.style.display = 'block';
+            bubbleVisible = true;
+            
+            setTimeout(() => {
+                if (bubbleVisible) {
+                    bubbleTip.style.display = 'none';
+                    bubbleVisible = false;
+                }
+            }, 10000);
+        }
     }
-}
-    // 点击气泡任意地方立即隐藏
+    
     bubbleTip.addEventListener('click', () => {
         bubbleTip.style.display = 'none';
         bubbleVisible = false;
         
-        // 重新开始两分钟计时
         clearInterval(bubbleTimer);
         bubbleTimer = setInterval(showBubble, 120000);
     });
     
-    // 初始启动定时器
     bubbleTimer = setInterval(showBubble, 120000);
     
     const chatWindow = document.createElement('div');
@@ -73,7 +255,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(chatWindow);
     
     function initChatSystem() {
-        const { BOT_QQ, BOT_NAME, WS_URL, MASTER_QQ, MASTER_PASSWORD } = config;
+        const { BOT_QQ, BOT_NAME, WS_URL } = config;
+        
         // 添加窗口大小调整手柄
         const resizeHandle = document.createElement('div');
         resizeHandle.className = 'resize-handle';
@@ -82,50 +265,179 @@ document.addEventListener('DOMContentLoaded', () => {
         // 头部区域
         const header = document.createElement('div');
         header.className = 'chat-header';
-        header.innerHTML = `<h3>这是你的${BOT_NAME}呀~</h3>`;
+        
+        const titleContainer = document.createElement('div');
+        titleContainer.className = 'header-title-container';
+        
+        const title = document.createElement('h3');
+        title.textContent = `这是你的${BOT_NAME}呀~`;
+        titleContainer.appendChild(title);
+        
+        header.appendChild(titleContainer);
         
         const statusIndicator = document.createElement('div');
         statusIndicator.id = 'statusIndicator';
         statusIndicator.textContent = '● 离线';
-        header.appendChild(statusIndicator);
+        
+        const adminEntryButton = document.createElement('div');
+        adminEntryButton.className = 'admin-entry-button';
+        adminEntryButton.innerHTML = '管理入口';
+        adminEntryButton.title = '点击进入管理员登录界面';
+        
+        const headerControls = document.createElement('div');
+        headerControls.className = 'header-controls';
+        headerControls.appendChild(statusIndicator);
+        headerControls.appendChild(adminEntryButton);
+        
+        header.appendChild(headerControls);
         
         // 消息区域
         const messageArea = document.createElement('div');
         messageArea.id = 'messageArea';
         
-        // 登录表单
-        const loginForm = document.createElement('div');
-        loginForm.className = 'login-form';
+        // 用户登录表单
+        const userLoginForm = document.createElement('div');
+        userLoginForm.className = 'user-login-form';
+        userLoginForm.style.display = 'none';
         
-        const userQQInput = document.createElement('input');
-        userQQInput.className = 'user-input';
-        userQQInput.placeholder = '请输入你的QQ号';
-        userQQInput.id = 'userQQInput';
-        userQQInput.name = 'qq';
+        const userLoginMessage = document.createElement('div');
+        userLoginMessage.className = 'login-message';
+        userLoginMessage.textContent = '正在初始化用户会话...';
+        userLoginForm.appendChild(userLoginMessage);
         
-        const loginButton = document.createElement('button');
-        loginButton.className = 'login-button';
-        loginButton.textContent = '创建对话';
+        const loginSpinner = document.createElement('div');
+        loginSpinner.className = 'login-spinner';
+        userLoginForm.appendChild(loginSpinner);
         
-        loginForm.appendChild(userQQInput);
-        loginForm.appendChild(loginButton);
-
-        // 在loginForm中添加机器人头像
+        // 管理员登录表单
+        const adminLoginForm = document.createElement('div');
+        adminLoginForm.className = 'admin-login-form';
+        adminLoginForm.style.display = 'none';
+        
+        const adminLoginTitle = document.createElement('h4');
+        adminLoginTitle.textContent = '管理员登录';
+        adminLoginTitle.style.margin = '0 0 15px 0';
+        adminLoginTitle.style.color = '#333';
+        adminLoginTitle.style.fontSize = '16px';
+        adminLoginTitle.style.fontWeight = '600';
+        adminLoginForm.appendChild(adminLoginTitle);
+        
+        const adminAccountInput = document.createElement('input');
+        adminAccountInput.className = 'admin-input';
+        adminAccountInput.placeholder = '超管账号';
+        adminAccountInput.id = 'adminAccountInput';
+        adminAccountInput.type = 'text';
+        adminAccountInput.style.padding = '10px 15px';
+        adminAccountInput.style.marginBottom = '10px';
+        adminAccountInput.style.border = '1px solid #ddd';
+        adminAccountInput.style.borderRadius = '20px';
+        adminAccountInput.style.width = '80%';
+        adminAccountInput.style.maxWidth = '200px';
+        adminAccountInput.style.textAlign = 'center';
+        adminAccountInput.style.fontSize = '14px';
+        adminAccountInput.style.outline = 'none';
+        
+        const adminPasswordInput = document.createElement('input');
+        adminPasswordInput.type = 'password';
+        adminPasswordInput.className = 'admin-input';
+        adminPasswordInput.placeholder = '超管密码';
+        adminPasswordInput.id = 'adminPasswordInput';
+        adminPasswordInput.style.padding = '10px 15px';
+        adminPasswordInput.style.marginBottom = '10px';
+        adminPasswordInput.style.border = '1px solid #ddd';
+        adminPasswordInput.style.borderRadius = '20px';
+        adminPasswordInput.style.width = '80%';
+        adminPasswordInput.style.maxWidth = '200px';
+        adminPasswordInput.style.textAlign = 'center';
+        adminPasswordInput.style.fontSize = '14px';
+        adminPasswordInput.style.outline = 'none';
+        
+        const adminLoginButton = document.createElement('button');
+        adminLoginButton.className = 'admin-login-button';
+        adminLoginButton.textContent = '管理员登录';
+        adminLoginButton.style.padding = '10px 20px';
+        adminLoginButton.style.background = 'linear-gradient(45deg, #ef71aa, #ff6b6b)';
+        adminLoginButton.style.color = 'white';
+        adminLoginButton.style.border = 'none';
+        adminLoginButton.style.borderRadius = '20px';
+        adminLoginButton.style.cursor = 'pointer';
+        adminLoginButton.style.fontWeight = 'bold';
+        adminLoginButton.style.marginTop = '10px';
+        adminLoginButton.style.width = '80%';
+        adminLoginButton.style.maxWidth = '200px';
+        adminLoginButton.style.fontSize = '14px';
+        adminLoginButton.style.transition = 'all 0.3s';
+        
+        const adminLoginMessage = document.createElement('div');
+        adminLoginMessage.className = 'admin-login-message';
+        adminLoginMessage.textContent = '请输入超管账号和密码以进行管理员登录';
+        adminLoginMessage.style.color = '#666';
+        adminLoginMessage.style.fontSize = '12px';
+        adminLoginMessage.style.textAlign = 'center';
+        adminLoginMessage.style.marginTop = '10px';
+        adminLoginMessage.style.padding = '5px';
+        adminLoginMessage.style.borderRadius = '5px';
+        adminLoginMessage.style.width = '100%';
+        adminLoginMessage.style.lineHeight = '1.4';
+        
+        adminLoginForm.appendChild(adminAccountInput);
+        adminLoginForm.appendChild(adminPasswordInput);
+        adminLoginForm.appendChild(adminLoginButton);
+        adminLoginForm.appendChild(adminLoginMessage);
+        
+        // 聊天界面
+        const chatInterface = document.createElement('div');
+        chatInterface.className = 'chat-interface';
+        chatInterface.style.display = 'none';
+        chatInterface.style.flexDirection = 'column';
+        chatInterface.style.alignItems = 'center';
+        chatInterface.style.justifyContent = 'center';
+        chatInterface.style.padding = '20px';
+        chatInterface.style.textAlign = 'center';
+        
         const botAvatarContainer = document.createElement('div');
         botAvatarContainer.className = 'bot-avatar-container';
-
+        botAvatarContainer.style.display = 'flex';
+        botAvatarContainer.style.justifyContent = 'center';
+        botAvatarContainer.style.margin = '0 0 20px 0';
+        botAvatarContainer.style.width = '100%';
+        botAvatarContainer.style.flexDirection = 'column';
+        botAvatarContainer.style.alignItems = 'center';
+        
         const botAvatar = document.createElement('img');
         botAvatar.className = 'bot-avatar';
         botAvatar.src = `https://q.qlogo.cn/g?b=qq&s=0&nk=${BOT_QQ}`;
         botAvatar.alt = `${BOT_NAME}头像`;
-
+        botAvatar.style.width = '100px';
+        botAvatar.style.height = '100px';
+        botAvatar.style.borderRadius = '50%';
+        botAvatar.style.border = '3px solid #ef71aa';
+        botAvatar.style.objectFit = 'cover';
+        botAvatar.style.display = 'block';
+        botAvatar.style.margin = '0 auto 10px';
+        
+        const welcomeMessage = document.createElement('div');
+        welcomeMessage.className = 'welcome-message';
+        welcomeMessage.innerHTML = `
+            <p>欢迎回来~桃妹的原型是胡桃，直接与我对话是用大模型对话哦，可能会慢一点，请稍等就好，更多机器人功能请输入#帮助</p>
+        `;
+        welcomeMessage.style.fontSize = '12px';
+        welcomeMessage.style.color = '#666';
+        welcomeMessage.style.textAlign = 'center';
+        welcomeMessage.style.padding = '10px';
+        welcomeMessage.style.margin = '0 20px';
+        welcomeMessage.style.borderRadius = '10px';
+        welcomeMessage.style.lineHeight = '1.5';
+        welcomeMessage.style.background = 'rgba(0,0,0,0.05)';
+        
         botAvatarContainer.appendChild(botAvatar);
-        loginForm.insertBefore(botAvatarContainer, userQQInput);
+        chatInterface.appendChild(botAvatarContainer);
+        chatInterface.appendChild(welcomeMessage);
         
         // 输入区域
         const inputGroup = document.createElement('div');
         inputGroup.className = 'input-group';
-        inputGroup.style.display = 'none'; // 默认隐藏
+        inputGroup.style.display = 'none';
         
         const messageInput = document.createElement('input');
         messageInput.className = 'message-input';
@@ -138,58 +450,35 @@ document.addEventListener('DOMContentLoaded', () => {
         sendButton.className = 'send-button';
         sendButton.textContent = '发送';
         
+        const adminModeBadge = document.createElement('div');
+        adminModeBadge.className = 'admin-mode-badge';
+        adminModeBadge.textContent = '管理员模式';
+        adminModeBadge.style.display = 'none';
+        
         inputGroup.appendChild(messageInput);
         inputGroup.appendChild(sendButton);
+        inputGroup.appendChild(adminModeBadge);
         
+        // 添加所有元素到窗口
         chatWindow.appendChild(header);
         chatWindow.appendChild(messageArea);
-        messageArea.appendChild(loginForm);
+        messageArea.appendChild(userLoginForm);
+        messageArea.appendChild(adminLoginForm);
+        messageArea.appendChild(chatInterface);
         chatWindow.appendChild(inputGroup);
         
         let socket = null;
-        let userQQ = null;
         let heartbeatTimer = null;
-        let heartbeatCheckTimer = null;
-        let lastPongTime = null;
         let reconnectAttempts = 0;
         const MAX_RECONNECT_ATTEMPTS = 5;
         let messageCounter = 100000;
-        let isResizing = false;
-        let startX, startY, startWidth, startHeight;
         let connectionState = 'disconnected';
         
-        // 动态添加密码框（管理员专属）
-        userQQInput.addEventListener('input', function() {
-            const passwordInput = document.getElementById('masterPasswordInput');
-            if (this.value.trim() === MASTER_QQ && !passwordInput) {
-                const passwordField = document.createElement('input');
-                passwordField.type = 'password';
-                passwordField.placeholder = '管理员密码';
-                passwordField.id = 'masterPasswordInput';
-                passwordField.className = 'user-input password-input';
-                loginForm.insertBefore(passwordField, loginButton);
-            } else if (passwordInput && this.value.trim() !== MASTER_QQ) {
-                passwordInput.remove();
-            }
-        });
+        // 打字指示器和超时器
+        let typingIndicators = {};
+        let typingTimeouts = {};
         
-        // 模拟的bot信息
-        const simulatedBotInfo = {
-            model: 'Web-Onebot-link',
-            info: {
-                user_id: BOT_QQ,
-                nickname: BOT_NAME
-            },
-            guild_info: {},
-            clients: [],
-            version: {
-                app_name: 'Web-Onebot-link',
-                app_version: '1.0.0',
-                protocol_version: 'v11',
-                version: 'Web-Onebot-link v1.0.0'
-            }
-        };
-        
+        // 更新状态显示
         function updateStatus(text, color) {
             statusIndicator.innerHTML = `● ${text}`;
             statusIndicator.style.color = color;
@@ -197,6 +486,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log(`[STATUS] 连接状态更新: ${text}`);
         }
 
+        // 添加消息到聊天区域
         function addMessage(content, sender, type = 'text') {
             const container = document.createElement('div');
             container.className = `message-container ${sender}`;
@@ -206,9 +496,16 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const avatar = document.createElement('img');
             avatar.className = 'avatar-img';
-            avatar.src = sender === 'user' 
-                ? `https://q.qlogo.cn/g?b=qq&s=0&nk=${userQQ}`
-                : `https://q.qlogo.cn/g?b=qq&s=0&nk=${BOT_QQ}`;
+            
+            if (sender === 'user') {
+                if (currentAvatar && currentAvatar.url) {
+                    avatar.src = currentAvatar.url;
+                } else {
+                    avatar.src = 'https://q.qlogo.cn/g?b=qq&s=0&nk=0';
+                }
+            } else {
+                avatar.src = `https://q.qlogo.cn/g?b=qq&s=0&nk=${BOT_QQ}`;
+            }
             
             avatarContainer.appendChild(avatar);
             container.appendChild(avatarContainer);
@@ -216,10 +513,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const contentContainer = document.createElement('div');
             contentContainer.className = 'content-container';
 
-            if (userQQ === MASTER_QQ && sender === 'user') {
+            if (isAdminMode && sender === 'user') {
                 const badge = document.createElement('span');
                 badge.className = 'admin-badge';
                 badge.textContent = '管理员';
+                badge.style.position = 'absolute';
+                badge.style.top = '-5px';
+                badge.style.right = '-5px';
+                badge.style.background = 'linear-gradient(45deg, #ef71aa, #ff6b6b)';
+                badge.style.color = 'white';
+                badge.style.fontSize = '10px';
+                badge.style.padding = '2px 6px';
+                badge.style.borderRadius = '10px';
+                badge.style.zIndex = '10';
+                badge.style.whiteSpace = 'nowrap';
+                badge.style.fontWeight = 'bold';
+                badge.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
                 avatarContainer.appendChild(badge);
             }
             
@@ -227,7 +536,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const bubble = document.createElement('div');
                 bubble.className = 'message-bubble';
                 
-                // 关键改进1：处理换行符
                 const lines = content.split('\n');
                 lines.forEach((line, index) => {
                     bubble.appendChild(document.createTextNode(line));
@@ -243,41 +551,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 img.className = 'message-image fancybox';
                 img.dataset.fancybox = "gallery";
                 
-                // 关键改进2：识别多种图片格式
                 if (content.startsWith('http://') || content.startsWith('https://') || 
                     content.startsWith('/') || content.startsWith('./') || content.startsWith('../')) {
-                    img.src = content; // 直接使用URL
+                    img.src = content;
                 } else if (content.startsWith('base64://')) {
                     const base64Data = content.replace('base64://', '');
                     img.src = `data:image/png;base64,${base64Data}`;
                 } else {
                     console.warn('无法识别的图片格式:', content);
-                    img.src = ''; // 安全回退
+                    img.src = '';
                 }
                 
                 contentContainer.appendChild(img);
             }
+            
+            // 延迟绑定Fancybox
             setTimeout(() => {
                 const robotImages = document.querySelectorAll('.message-container.robot .fancybox');
                 robotImages.forEach(img => {
-                  img.addEventListener('dblclick', () => {
-                    // 调用主题的 Fancybox 插件
-                    if (window.Fancybox) {
-                      Fancybox.show([{ src: img.src }], { groupAll: true });
-                    }
-                  });
+                    img.addEventListener('dblclick', () => {
+                        if (window.Fancybox) {
+                            Fancybox.show([{ src: img.src }], { groupAll: true });
+                        }
+                    });
                 });
-              }, 0);
+            }, 0);
+            
             container.appendChild(contentContainer);
             messageArea.appendChild(container);
             messageArea.scrollTop = messageArea.scrollHeight;
         }
         
-                // 在全局变量区域添加
-        let typingIndicators = {}; // 存储所有正在显示的指示器 {messageId: indicatorId}
-        let typingTimeouts = {};   // 存储指示器的超时定时器
-        
-        // 在addMessage函数后添加新函数 - 创建打字指示器
+        // 添加打字指示器
         function addTypingIndicator(messageId) {
             const container = document.createElement('div');
             container.id = `typing-indicator-${messageId}`;
@@ -298,10 +603,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const bubble = document.createElement('div');
             bubble.className = 'message-bubble typing-indicator';
             
-            // 创建三个动画圆点
             for (let i = 0; i < 3; i++) {
                 const dot = document.createElement('span');
                 dot.className = 'typing-dot';
+                dot.style.display = 'inline-block';
+                dot.style.width = '8px';
+                dot.style.height = '8px';
+                dot.style.borderRadius = '50%';
+                dot.style.margin = '0 3px';
+                dot.style.background = '#a0a0a0';
+                dot.style.animation = 'typing-dot 1.4s infinite ease-in-out both';
                 bubble.appendChild(dot);
             }
             
@@ -310,16 +621,15 @@ document.addEventListener('DOMContentLoaded', () => {
             messageArea.appendChild(container);
             messageArea.scrollTop = messageArea.scrollHeight;
             
-            // 设置2分钟超时
             typingTimeouts[messageId] = setTimeout(() => {
                 removeTypingIndicator(messageId);
                 addSystemMessage('服务可能繁忙，可能会更长时间才能得到回复。请稍等，也可重复发送信息~');
-            }, 120000); // 2分钟
+            }, 120000);
             
             return container.id;
         }
         
-        // 添加移除指示器的函数
+        // 移除打字指示器
         function removeTypingIndicator(messageId) {
             const indicatorId = typingIndicators[messageId];
             if (indicatorId) {
@@ -336,15 +646,17 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
+        // 添加系统消息
         function addSystemMessage(text) {
             const sysMsg = document.createElement('div');
             sysMsg.className = 'system-message';
-            sysMsg.innerHTML = text; // 改为innerHTML
-            messageArea.appendChild(sysMsg);;
+            sysMsg.innerHTML = text;
+            messageArea.appendChild(sysMsg);
             messageArea.scrollTop = messageArea.scrollHeight;
             console.log(`[SYSTEM] ${text}`);
         }
         
+        // 停止心跳
         function stopHeartbeat() {
             if (heartbeatTimer) {
                 clearInterval(heartbeatTimer);
@@ -352,7 +664,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // 关键修复：完整的心跳包格式（包含status字段）
+        // 发送心跳
         function sendHeartbeat() {
             if (!socket || socket.readyState !== WebSocket.OPEN) return;
             
@@ -363,7 +675,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     "self_id": BOT_QQ,
                     "time": Math.floor(Date.now() / 1000),
                     "interval": 15000,
-                    "status": {  // 必需字段
+                    "status": {
                         "app_initialized": true,
                         "app_enabled": true,
                         "plugins_good": true,
@@ -378,7 +690,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 handleReconnect();
             }
         }
-
+        
+        // 连接WebSocket
         function connectWebSocket() {
             if (socket && (socket.readyState === WebSocket.OPEN || 
                            socket.readyState === WebSocket.CONNECTING)) {
@@ -401,7 +714,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     addSystemMessage('连接建立成功');
                     reconnectAttempts = 0;
                     
-                    // 发送认证信息（符合OneBotv11协议）
                     const authPayload = {
                         "post_type": "meta_event",
                         "meta_event_type": "lifecycle",
@@ -418,103 +730,75 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.log('[AUTH] 发送认证信息', authPayload);
                     socket.send(JSON.stringify(authPayload));
                     
-                    // 启动心跳机制
-                    startHeartbeat();
+                    stopHeartbeat();
+                    heartbeatTimer = setInterval(sendHeartbeat, 15000);
                 };
                 
-                // 处理API请求（关键新增）
-                 // 核心修复：API请求处理器
-        function handleApiRequest(request) {
-            const response = {
-                status: "ok",
-                retcode: 0,
-                echo: request.echo,
-                data: null
-            };
+                // API请求处理器
+                function handleApiRequest(request) {
+                    const response = {
+                        status: "ok",
+                        retcode: 0,
+                        echo: request.echo,
+                        data: null
+                    };
 
-            switch (request.action) {
-                case "get_login_info":
-                    console.log("[API] 响应get_login_info");
-                    response.data = {
-                        user_id: BOT_QQ,
-                        nickname: BOT_NAME
-                    };
-                    break;
-                    
-                case "get_version_info":
-                    console.log("[API] 响应get_version_info");
-                    response.data = {
-                        app_name: "Web-Onebot-link",
-                        app_version: "1.0.0",
-                        protocol_version: "v11"
-                    };
-                    break;
-                    
-                case "get_friend_list":
-                    console.log("[API] 响应get_friend_list");
-                    // 模拟好友列表，包含用户输入的QQ号
-                    response.data = [
-                        {
-                            user_id: userQQ,
-                            nickname: "用户",
-                            remark: ""
-                        }
-                    ];
-                    break;
-                    
-                case "get_group_list":
-                    console.log("[API] 响应get_group_list");
-                    response.data = [
-                        {
-                            group_id: 000,
-                            group_name: "群组",
-                            group_memo: "",
-                            group_create_time: 0,
-                            group_level: 0,
-                            member_count: 0,
-                            max_member_count: 0
-                        }
-                    ]; // 模拟没有群组
-                    break;
-                    
-                case "_set_model_show":
-                    console.log("[API] 响应_set_model_show");
-                    response.data = { result: true };
-                    break;
-                    
-                }
-                        
-                        // 发送API响应
-                try {
-                    socket.send(JSON.stringify(response));
-                    console.log('[SEND] API响应:', response);
-                } catch (e) {
-                    console.error('[ERROR] API响应发送失败:', e);
-                }
-            }
-                
-                function parseMessageSegment(segment) {
-                    if (segment.type === 'text') {
-                      return segment.data.text;
-                    } else if (segment.type === 'image') {
-                      const base64Data = segment.data.file.replace('base64://', '');
-                      return `data:image/${segment.data.type || 'png'};base64,${base64Data}`;
-                    } else if (segment.type === 'node') { // 关键修复：处理嵌套消息
-                      const nodeContent = segment.data.content.map(parseMessageSegment).join('');
-                      return `[转发消息] ${segment.data.name}: ${nodeContent}`;
+                    switch (request.action) {
+                        case "get_login_info":
+                            console.log("[API] 响应get_login_info");
+                            response.data = {
+                                user_id: BOT_QQ,
+                                nickname: BOT_NAME
+                            };
+                            break;
+                            
+                        case "get_version_info":
+                            console.log("[API] 响应get_version_info");
+                            response.data = {
+                                app_name: "Web-Onebot-link",
+                                app_version: "1.0.0",
+                                protocol_version: "v11"
+                            };
+                            break;
+                            
+                        case "get_friend_list":
+                            console.log("[API] 响应get_friend_list");
+                            response.data = [
+                                {
+                                    user_id: isAdminMode ? currentMasterQQ : (currentUserId || 'anonymous'),
+                                    nickname: isAdminMode ? "管理员" : "用户",
+                                    remark: ""
+                                }
+                            ];
+                            break;
+                            
+                        case "get_group_list":
+                            console.log("[API] 响应get_group_list");
+                            response.data = [];
+                            break;
+                            
+                        case "_set_model_show":
+                            console.log("[API] 响应_set_model_show");
+                            response.data = { result: true };
+                            break;
                     }
-                    return `[暂不支持的消息类型: ${segment.type}]`;
-                  }
-                  
-                  socket.onmessage = (event) => {
+                            
+                    try {
+                        socket.send(JSON.stringify(response));
+                        console.log('[SEND] API响应:', response);
+                    } catch (e) {
+                        console.error('[ERROR] API响应发送失败:', e);
+                    }
+                }
+                
+                // 消息接收处理器
+                socket.onmessage = (event) => {
                     try {
                         const data = JSON.parse(event.data);
                         console.log('[RECV] 收到消息', data);
                         
-                        // 检查是否有待处理的指示器
                         const messageIds = Object.keys(typingIndicators);
                         if (messageIds.length > 0) {
-                            // 移除最早的消息指示器
                             const oldestMessageId = messageIds[0];
                             removeTypingIndicator(oldestMessageId);
                         }
@@ -524,24 +808,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         
                         if (data.meta_event_type === 'heartbeat') {
-                            lastPongTime = Date.now();
                             console.log('[HEARTBEAT] 收到心跳响应');
                             return;
                         }
-                        // 处理转发信息
+                        
                         if (data.action === 'send_private_forward_msg' && data.params) {
                             addForwardMessage(data.params.messages);
                         }
-                        // 处理普通消息
+                        
                         if (data.action === 'send_msg' && data.params) {
                             const messageArray = data.params.message;
                             if (Array.isArray(messageArray)) {
                                 messageArray.forEach(segment => {
                                     if (segment.type === 'text') {
-                                        // 关键改进：保留换行符
                                         addMessage(segment.data.text, 'robot');
                                     } else if (segment.type === 'image') {
-                                        // 关键改进：支持多种图片格式
                                         const imgContent = segment.data.file || '';
                                         addMessage(imgContent, 'robot', 'image');
                                     }
@@ -580,7 +861,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateStatus('离线', '#ff4d4d');
                     addSystemMessage(`连接已断开 (代码: ${event.code}, 原因: ${event.reason || '无'})`);
                     stopHeartbeat();
-                    // 清除所有打字指示器
+                    
                     Object.keys(typingIndicators).forEach(removeTypingIndicator);
                     typingIndicators = {};
                     typingTimeouts = {};
@@ -590,7 +871,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         reconnectAttempts++;
                         addSystemMessage(`将在 ${delay/1000} 秒后尝试重新连接...`);
                         
-                        // 智能重连策略
                         setTimeout(() => {
                             if (connectionState !== 'connecting') {
                                 connectWebSocket();
@@ -609,181 +889,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // 新增：创建转发消息预览
-            function addForwardMessage(messages) {
-                // 创建机器人消息容器
-                const messageContainer = document.createElement('div');
-                messageContainer.className = 'message-container robot';
-                
-                // 创建机器人头像
-                const avatarContainer = document.createElement('div');
-                avatarContainer.className = 'avatar-container';
-                
-                const avatar = document.createElement('img');
-                avatar.className = 'avatar-img';
-                avatar.src = `https://q.qlogo.cn/g?b=qq&s=0&nk=${config.BOT_QQ}`;
-                avatarContainer.appendChild(avatar);
-                messageContainer.appendChild(avatarContainer);
-                
-                // 创建内容容器
-                const contentContainer = document.createElement('div');
-                contentContainer.className = 'content-container';
-                
-                // 创建转发预览框
-                const previewContainer = document.createElement('div');
-                previewContainer.className = 'forward-preview-container';
-                
-                // 创建预览标题
-                const previewTitle = document.createElement('div');
-                previewTitle.className = 'forward-preview-title';
-                previewTitle.textContent = '转发的聊天记录';
-                previewContainer.appendChild(previewTitle);
-                
-                // 创建消息节点容器
-                const nodesContainer = document.createElement('div');
-                nodesContainer.className = 'forward-nodes-container';
-                
-                // 处理每个消息节点
-                messages.forEach((node, index) => {
-                    if (node.data.content.length > 0) {
-                        const firstContent = node.data.content[0];
-                        const nodeElement = document.createElement('div');
-                        nodeElement.className = 'forward-preview-node';
-                        
-                        // 创建头像
-                        const avatar = document.createElement('img');
-                        avatar.className = 'forward-preview-avatar';
-                        avatar.src = `https://q.qlogo.cn/g?b=qq&s=0&nk=${node.data.uin}`;
-                        
-                        // 创建文本预览
-                        const textPreview = document.createElement('div');
-                        textPreview.className = 'forward-preview-text';
-                        if (firstContent.type === 'text') {
-                            const text = firstContent.data.text;
-                            const firstLine = text.split('\n')[0];
-                            textPreview.textContent = firstLine;
-                        } else if (firstContent.type === 'image') {
-                            textPreview.textContent = '[图片]';
-                        } else {
-                            textPreview.textContent = `[${firstContent.type}]`;
-                        }
-                        
-                        nodeElement.appendChild(avatar);
-                        nodeElement.appendChild(textPreview);
-                        nodesContainer.appendChild(nodeElement);
-                    }
-                });
-                
-                previewContainer.appendChild(nodesContainer);
-                contentContainer.appendChild(previewContainer);
-                messageContainer.appendChild(contentContainer);
-                messageArea.appendChild(messageContainer);
-                messageArea.scrollTop = messageArea.scrollHeight;
-                
-                // 点击预览展开详细消息
-                previewContainer.addEventListener('click', () => {
-                    showForwardDetail(messages);
-                });
-            }
-
-            // 新增：显示转发详情弹窗
-            function showForwardDetail(messages) {
-                // 创建弹窗容器
-                const detailModal = document.createElement('div');
-                detailModal.className = 'forward-detail-modal';
-                
-                // 创建弹窗内容容器
-                const detailContent = document.createElement('div');
-                detailContent.className = 'forward-detail-content';
-                
-                // 创建关闭按钮
-                const closeBtn = document.createElement('div');
-                closeBtn.className = 'forward-detail-close';
-                closeBtn.textContent = '×';
-                closeBtn.addEventListener('click', () => {
-                    document.body.removeChild(detailModal);
-                });
-                detailContent.appendChild(closeBtn);
-                
-                // 处理每个消息节点
-                messages.forEach(node => {
-                    // 创建节点容器
-                    const nodeContainer = document.createElement('div');
-                    nodeContainer.className = 'forward-detail-node';
-                    
-                    // 创建节点头部（头像和名字）
-                    const nodeHeader = document.createElement('div');
-                    nodeHeader.className = 'forward-detail-header';
-                    
-                    const avatar = document.createElement('img');
-                    avatar.className = 'forward-detail-avatar';
-                    avatar.src = `https://q.qlogo.cn/g?b=qq&s=0&nk=${node.data.uin}`;
-                    
-                    const name = document.createElement('span');
-                    name.className = 'forward-detail-name';
-                    name.textContent = node.data.name;
-                    
-                    nodeHeader.appendChild(avatar);
-                    nodeHeader.appendChild(name);
-                    nodeContainer.appendChild(nodeHeader);
-                    
-                    // 创建节点消息内容
-                    const nodeMessages = document.createElement('div');
-                    nodeMessages.className = 'forward-detail-messages';
-                    
-                    // 处理节点内的每条消息
-                    node.data.content.forEach(contentItem => {
-                        if (contentItem.type === 'text') {
-                            const textBubble = document.createElement('div');
-                            textBubble.className = 'message-bubble';
-                            
-                            // 处理换行
-                            const lines = contentItem.data.text.split('\n');
-                            lines.forEach((line, index) => {
-                                textBubble.appendChild(document.createTextNode(line));
-                                if (index < lines.length - 1) {
-                                    textBubble.appendChild(document.createElement('br'));
-                                }
-                            });
-                            
-                            nodeMessages.appendChild(textBubble);
-                        } else if (contentItem.type === 'image') {
-                            const img = document.createElement('img');
-                            img.className = 'message-image fancybox';
-                            img.dataset.fancybox = "gallery";
-                            
-                            // 处理图片URL
-                            if (contentItem.data.file.startsWith('http') || 
-                                contentItem.data.file.startsWith('/') || 
-                                contentItem.data.file.startsWith('./')) {
-                                img.src = contentItem.data.file;
-                            } else if (contentItem.data.file.startsWith('base64://')) {
-                                const base64Data = contentItem.data.file.replace('base64://', '');
-                                img.src = `data:image/png;base64,${base64Data}`;
-                            } else {
-                                console.warn('无法识别的图片格式:', contentItem.data.file);
-                                img.src = '';
-                            }
-                            
-                            nodeMessages.appendChild(img);
-                        }
-                    });
-                    
-                    nodeContainer.appendChild(nodeMessages);
-                    detailContent.appendChild(nodeContainer);
-                });
-                
-                detailModal.appendChild(detailContent);
-                document.body.appendChild(detailModal);
-                
-                // 点击弹窗外部关闭弹窗
-                detailModal.addEventListener('click', (e) => {
-                    if (e.target === detailModal) {
-                        document.body.removeChild(detailModal);
-                    }
-                });
-            }
-
+        // 处理重连
         function handleReconnect() {
             if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
                 const delay = 3000;
@@ -795,34 +901,26 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        function startHeartbeat() {
-            stopHeartbeat();
-            sendHeartbeat();
-            heartbeatTimer = setInterval(sendHeartbeat, 15000);
-        }
-        
+        // 发送消息
         function sendMessage() {
             const message = messageInput.value.trim();
             if (!message || !socket) return;
-            // 生成唯一消息ID
+            
             const messageId = messageCounter++;
-            // 添加用户消息
+            
             addMessage(message, 'user');
             
-            // 添加机器人打字指示器
             const indicatorId = addTypingIndicator(messageId);
             typingIndicators[messageId] = indicatorId;
             
             if (socket.readyState === WebSocket.OPEN) {
-                
                 try {
-                    const messageId = messageCounter++;
                     const eventPayload = {
                         "post_type": "message",
                         "message_type": "private",
                         "sub_type": "friend",
                         "message_id": messageId,
-                        "user_id": userQQ,
+                        "user_id": isAdminMode ? currentMasterQQ : currentUserId,
                         "self_id": BOT_QQ,
                         "message": [
                             {
@@ -833,8 +931,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         "raw_message": message,
                         "font": 0,
                         "sender": {
-                            "user_id": userQQ,
-                            "nickname": "用户",
+                            "user_id": isAdminMode ? currentMasterQQ : currentUserId,
+                            "nickname": isAdminMode ? "管理员" : "用户",
                             "sex": "unknown",
                             "age": 0
                         },
@@ -854,135 +952,414 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        function initResize() {
-            // 创建四角拉伸区域
-            const corners = ['tl', 'tr', 'bl', 'br'];
-            corners.forEach(pos => {
-                const corner = document.createElement('div');
-                corner.className = `resize-corner resize-${pos}`;
-                chatWindow.appendChild(corner);
-                
-                corner.addEventListener('mousedown', function(e) {
-                    e.preventDefault();
-                    isResizing = true;
-                    resizeCorner = pos; // 记录当前拉伸的角落
-                    
-                    startX = e.clientX;
-                    startY = e.clientY;
-                    startWidth = parseInt(document.defaultView.getComputedStyle(chatWindow).width, 10);
-                    startHeight = parseInt(document.defaultView.getComputedStyle(chatWindow).height, 10);
-                    startLeft = parseInt(document.defaultView.getComputedStyle(chatWindow).left, 10) || 0;
-                    startTop = parseInt(document.defaultView.getComputedStyle(chatWindow).top, 10) || 0;
-                    
-                    document.addEventListener('mousemove', handleMouseMove);
-                    document.addEventListener('mouseup', stopResize);
-                });
-            });
+        // 初始化用户
+        async function initializeUser() {
+    try {
+        addSystemMessage('正在初始化聊天系统...');
         
-            function handleMouseMove(e) {
-                if (!isResizing) return;
+        // 首先尝试验证管理员令牌
+        if (authToken) {
+            addSystemMessage('检测到管理员令牌，正在验证...');
+            const verifyResult = await verifyAdminToken();
+            if (verifyResult.valid) {
+                isAdminMode = true;
+                currentMasterQQ = verifyResult.realMasterQQ;
+                adminModeBadge.style.display = 'block';
+                addSystemMessage(`检测到有效管理员令牌，已进入管理员模式`);
                 
-                const deltaX = e.clientX - startX;
-                const deltaY = e.clientY - startY;
-                
-                switch(resizeCorner) {
-                    case 'tl': // 左上角
-                        chatWindow.style.width = (startWidth - deltaX) + 'px';
-                        chatWindow.style.height = (startHeight - deltaY) + 'px';
-                        chatWindow.style.left = (startLeft + deltaX) + 'px';
-                        chatWindow.style.top = (startTop + deltaY) + 'px';
-                        break;
-                    case 'tr': // 右上角
-                        chatWindow.style.width = (startWidth + deltaX) + 'px';
-                        chatWindow.style.height = (startHeight - deltaY) + 'px';
-                        chatWindow.style.top = (startTop + deltaY) + 'px';
-                        break;
-                    case 'bl': // 左下角
-                        chatWindow.style.width = (startWidth - deltaX) + 'px';
-                        chatWindow.style.height = (startHeight + deltaY) + 'px';
-                        chatWindow.style.left = (startLeft + deltaX) + 'px';
-                        break;
-                    case 'br': // 右下角
-                        chatWindow.style.width = (startWidth + deltaX) + 'px';
-                        chatWindow.style.height = (startHeight + deltaY) + 'px';
-                        break;
-                }
-                
-                // 确保最小尺寸
-                const width = parseInt(chatWindow.style.width);
-                const height = parseInt(chatWindow.style.height);
-                chatWindow.style.width = Math.max(300, width) + 'px';
-                chatWindow.style.height = Math.max(300, height) + 'px';
-            }
-            
-            function stopResize() {
-                isResizing = false;
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', stopResize);
+                // 使用管理员身份
+                userLoginForm.style.display = 'none';
+                adminLoginForm.style.display = 'none';
+                chatInterface.style.display = 'flex';
+                inputGroup.style.display = 'flex';
+                connectWebSocket();
+                return;
+            } else {
+                addSystemMessage('管理员令牌已失效，切换到普通用户模式');
+                authToken = null;
+                localStorage.removeItem('auth_token');
             }
         }
         
+        // 普通用户初始化
+        addSystemMessage('正在初始化用户会话...');
+        userLoginForm.style.display = 'flex';
+        chatInterface.style.display = 'none';
+        adminLoginForm.style.display = 'none';
+        
+        const result = await initUserSession();
+        
+        if (result.success) {
+            if (result.isNew) {
+                addSystemMessage(`欢迎新用户！您的用户ID: ${result.userId}`);
+            } else {
+                addSystemMessage(`检测到现有会话，正在恢复...`);
+                addSystemMessage(`欢迎回来！用户ID: ${result.userId}`);
+            }
+            
+            userLoginForm.style.display = 'none';
+            chatInterface.style.display = 'flex';
+            inputGroup.style.display = 'flex';
+            addSystemMessage('正在连接到聊天服务器...');
+            connectWebSocket();
+        } else {
+            userLoginMessage.textContent = result.message || '用户初始化失败，请刷新页面重试';
+        }
+    } catch (error) {
+        console.error('初始化失败:', error);
+        addSystemMessage('初始化失败，请刷新页面重试');
+        userLoginMessage.textContent = '初始化失败，请刷新页面重试';
+    }
+}
+        
+        // 管理员入口按钮点击事件
+        // 在initChatSystem函数中，找到adminEntryButton的点击事件处理函数
+// 修改为：
+
+// 管理员入口按钮点击事件
+adminEntryButton.addEventListener('click', () => {
+    if (isAdminMode) {
+        adminLogout();
+        isAdminMode = false;
+        currentMasterQQ = null;
+        adminModeBadge.style.display = 'none';
+        addSystemMessage('已退出管理员模式，切换到普通用户模式');
+        
+        // 重新初始化普通用户会话
+        initializeUser();
+    } else {
+        // 显示管理员登录表单
+        showAdminLoginForm();
+    }
+});
+
+// 显示管理员登录表单函数
+function showAdminLoginForm() {
+    console.log('显示管理员登录表单');
+    
+    // 1. 首先清除所有现有的系统消息
+    const systemMessages = messageArea.querySelectorAll('.system-message');
+    systemMessages.forEach(msg => msg.remove());
+    
+    // 2. 隐藏其他所有内容
+    chatInterface.style.display = 'none';
+    userLoginForm.style.display = 'none';
+    inputGroup.style.display = 'none';
+    
+    // 3. 清除消息区域中除了管理员登录表单之外的所有内容
+    const messages = messageArea.querySelectorAll('.message-container');
+    messages.forEach(msg => msg.remove());
+    
+    // 4. 将滚动条重置到顶部
+    messageArea.scrollTop = 0;
+    
+    // 5. 显示管理员登录表单，添加特殊类用于样式控制
+    adminLoginForm.style.display = 'flex';
+    adminLoginForm.classList.add('admin-form-active');
+    
+    // 6. 清空管理员输入框
+    adminAccountInput.value = '';
+    adminPasswordInput.value = '';
+    adminLoginMessage.textContent = '请输入超管账号和密码以进行管理员登录';
+    adminLoginMessage.style.color = '#666';
+    
+    // 7. 重置管理员登录按钮状态
+    adminLoginButton.disabled = false;
+    adminLoginButton.textContent = '管理员登录';
+    
+    // 8. 添加返回链接
+    addReturnToUserLink();
+}
+
+// 添加返回普通用户界面的链接
+function addReturnToUserLink() {
+    // 移除已存在的返回链接
+    const existingLink = document.querySelector('.switch-to-user-link');
+    if (existingLink) {
+        existingLink.remove();
+    }
+    
+    const returnLink = document.createElement('div');
+    returnLink.className = 'switch-to-user-link';
+    returnLink.textContent = '← 返回普通用户界面';
+    returnLink.style.cursor = 'pointer';
+    returnLink.style.marginTop = '15px';
+    returnLink.style.color = '#ef71aa';
+    returnLink.style.fontSize = '12px';
+    returnLink.style.textDecoration = 'underline';
+    
+    returnLink.addEventListener('click', () => {
+        // 重新初始化普通用户会话
+        adminLoginForm.style.display = 'none';
+        adminLoginForm.classList.remove('admin-form-active');
+        initializeUser();
+    });
+    
+    // 将返回链接添加到管理员登录表单的底部
+    const adminLoginMessage = document.querySelector('.admin-login-message');
+    if (adminLoginMessage) {
+        adminLoginForm.insertBefore(returnLink, adminLoginMessage.nextSibling);
+    } else {
+        adminLoginForm.appendChild(returnLink);
+    }
+}
+
+// 管理员登录失败时显示错误弹窗
+function showAdminLoginError(message, duration = 5000) {
+    // 移除已存在的错误弹窗
+    const existingError = document.querySelector('.admin-error-popup');
+    if (existingError) {
+        existingError.remove();
+    }
+    
+    const errorPopup = document.createElement('div');
+    errorPopup.className = 'admin-error';
+    errorPopup.textContent = message;
+    
+    // 样式
+    errorPopup.style.position = 'fixed';
+    errorPopup.style.top = '20px';
+    errorPopup.style.left = '50%';
+    errorPopup.style.transform = 'translateX(-50%)';
+    errorPopup.style.background = 'linear-gradient(45deg, #ff6b6b, #f44336)';
+    errorPopup.style.color = 'white';
+    errorPopup.style.padding = '10px 20px';
+    errorPopup.style.borderRadius = '20px';
+    errorPopup.style.zIndex = '10000';
+    errorPopup.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+    errorPopup.style.animation = 'fadeIn 0.3s ease-in-out';
+    errorPopup.style.fontSize = '14px';
+    errorPopup.style.fontWeight = '500';
+    
+    document.body.appendChild(errorPopup);
+    
+    // 5秒后自动消失
+    setTimeout(() => {
+        errorPopup.style.animation = 'fadeOut 0.3s ease-in-out';
+        setTimeout(() => {
+            if (errorPopup.parentNode) {
+                errorPopup.remove();
+            }
+        }, 300);
+    }, duration);
+}
+
+// 修改管理员登录按钮点击事件
+adminLoginButton.addEventListener('click', async () => {
+    const account = adminAccountInput.value.trim();
+    const password = adminPasswordInput.value.trim();
+    
+    if (!account || !password) {
+        showAdminLoginError('账号和密码不能为空');
+        return;
+    }
+    
+    adminLoginButton.disabled = true;
+    adminLoginButton.textContent = '登录中...';
+    adminLoginMessage.textContent = '正在验证管理员身份...';
+    adminLoginMessage.style.color = '#666';
+    
+    const result = await adminLogin(account, password);
+    
+    if (result.success) {
+        // 登录成功，隐藏管理员登录表单
+        adminLoginForm.style.display = 'none';
+        adminLoginForm.classList.remove('admin-form-active');
+        
+        // 清除返回链接
+        const returnLink = document.querySelector('.switch-to-user-link');
+        if (returnLink) {
+            returnLink.remove();
+        }
+        
+        // 显示聊天界面
+        chatInterface.style.display = 'flex';
+        isAdminMode = true;
+        currentMasterQQ = result.realMasterQQ;
+        adminModeBadge.style.display = 'block';
+        
+        addSystemMessage('管理员登录成功！');
+        addSystemMessage(`检测到有效管理员令牌，已进入管理员模式`);
+        
+        // 显示输入框
+        inputGroup.style.display = 'flex';
+        
+        // 连接WebSocket
+        connectWebSocket();
+    } else {
+        // 登录失败，显示错误弹窗
+        showAdminLoginError(result.message || '账号或密码错误');
+        adminLoginButton.textContent = '管理员登录';
+        adminLoginButton.disabled = false;
+    }
+});
+        
+        // 发送按钮点击事件
+        sendButton.addEventListener('click', sendMessage);
+        
+        // 输入框回车事件
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // 聊天图标点击事件
         chatIcon.addEventListener('click', () => {
             const isVisible = chatWindow.style.display === 'flex';
             chatIcon.style.transform = isVisible ? 'none' : 'rotate(15deg)';
             chatWindow.style.display = isVisible ? 'none' : 'flex';
             
-            // 打开窗口时立即隐藏气泡
             if (!isVisible) {
                 bubbleTip.style.display = 'none';
                 bubbleVisible = false;
+                
+                if (!isInitialized) {
+                    isInitialized = true;
+                    initializeUser();
+                }
             }
         });
         
-        // 登录按钮事件 (整合管理员验证)
-        loginButton.addEventListener('click', () => {
-            const qq = userQQInput.value.trim();
+        // 初始化调整大小功能
+        function initResize() {
+            let isResizing = false;
+            let resizeCorner = null;
+            let startX, startY, startWidth, startHeight, startLeft, startTop;
             
-            // 空值检查
-            if (!qq) {
-                addSystemMessage('请输入你的QQ号');
-                return;
-            }
+            const corners = ['tl', 'tr', 'bl', 'br'];
+            corners.forEach(pos => {
+                const corner = document.createElement('div');
+                corner.className = `resize-corner resize-${pos}`;
+                corner.style.position = 'absolute';
+                corner.style.width = '20px';
+                corner.style.height = '20px';
+                corner.style.zIndex = '10000';
+                corner.style.background = 'transparent';
+                
+                switch(pos) {
+                    case 'tl': 
+                        corner.style.top = '0'; 
+                        corner.style.left = '0'; 
+                        corner.style.cursor = 'nw-resize'; 
+                        break;
+                    case 'tr': 
+                        corner.style.top = '0'; 
+                        corner.style.right = '0'; 
+                        corner.style.cursor = 'ne-resize'; 
+                        break;
+                    case 'bl': 
+                        corner.style.bottom = '0'; 
+                        corner.style.left = '0'; 
+                        corner.style.cursor = 'sw-resize'; 
+                        break;
+                    case 'br': 
+                        corner.style.bottom = '0'; 
+                        corner.style.right = '0'; 
+                        corner.style.cursor = 'se-resize'; 
+                        break;
+                }
+                
+                chatWindow.appendChild(corner);
+                
+                corner.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    isResizing = true;
+                    resizeCorner = pos;
+                    
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    startWidth = parseInt(getComputedStyle(chatWindow).width, 10);
+                    startHeight = parseInt(getComputedStyle(chatWindow).height, 10);
+                    startLeft = parseInt(getComputedStyle(chatWindow).left, 10) || 0;
+                    startTop = parseInt(getComputedStyle(chatWindow).top, 10) || 0;
+                    
+                    function handleMouseMove(e) {
+                        if (!isResizing) return;
+                        
+                        const deltaX = e.clientX - startX;
+                        const deltaY = e.clientY - startY;
+                        
+                        switch(resizeCorner) {
+                            case 'tl':
+                                chatWindow.style.width = Math.max(300, startWidth - deltaX) + 'px';
+                                chatWindow.style.height = Math.max(300, startHeight - deltaY) + 'px';
+                                chatWindow.style.left = (startLeft + deltaX) + 'px';
+                                chatWindow.style.top = (startTop + deltaY) + 'px';
+                                break;
+                            case 'tr':
+                                chatWindow.style.width = Math.max(300, startWidth + deltaX) + 'px';
+                                chatWindow.style.height = Math.max(300, startHeight - deltaY) + 'px';
+                                chatWindow.style.top = (startTop + deltaY) + 'px';
+                                break;
+                            case 'bl':
+                                chatWindow.style.width = Math.max(300, startWidth - deltaX) + 'px';
+                                chatWindow.style.height = Math.max(300, startHeight + deltaY) + 'px';
+                                chatWindow.style.left = (startLeft + deltaX) + 'px';
+                                break;
+                            case 'br':
+                                chatWindow.style.width = Math.max(300, startWidth + deltaX) + 'px';
+                                chatWindow.style.height = Math.max(300, startHeight + deltaY) + 'px';
+                                break;
+                        }
+                    }
+                    
+                    function stopResize() {
+                        isResizing = false;
+                        document.removeEventListener('mousemove', handleMouseMove);
+                        document.removeEventListener('mouseup', stopResize);
+                    }
+                    
+                    document.addEventListener('mousemove', handleMouseMove);
+                    document.addEventListener('mouseup', stopResize);
+                });
+            });
             
-            // 管理员验证
-            let isAdmin = false;
-            if (qq === MASTER_QQ) {
-                const passwordInput = document.getElementById('masterPasswordInput');
-                if (!passwordInput || !passwordInput.value) {
-                    addSystemMessage('管理员需要输入密码');
+            // 拖动窗口
+            const header = chatWindow.querySelector('.chat-header');
+            let isDragging = false;
+            let dragStartX, dragStartY, dragStartLeft, dragStartTop;
+            
+            header.addEventListener('mousedown', (e) => {
+                if (e.target.closest('.admin-entry-button') || e.target.closest('#statusIndicator')) {
                     return;
                 }
-                if (passwordInput.value !== MASTER_PASSWORD) {
-                    addSystemMessage('管理员密码错误');
-                    return;
+                
+                isDragging = true;
+                dragStartX = e.clientX;
+                dragStartY = e.clientY;
+                dragStartLeft = parseInt(getComputedStyle(chatWindow).left, 10) || 0;
+                dragStartTop = parseInt(getComputedStyle(chatWindow).top, 10) || 0;
+                
+                function handleDragMove(e) {
+                    if (!isDragging) return;
+                    
+                    const deltaX = e.clientX - dragStartX;
+                    const deltaY = e.clientY - dragStartY;
+                    
+                    chatWindow.style.left = (dragStartLeft + deltaX) + 'px';
+                    chatWindow.style.top = (dragStartTop + deltaY) + 'px';
                 }
-                isAdmin = true;
-            }
-            
-            // 登录成功处理
-            userQQ = qq;
-            loginForm.style.display = 'none';
-            inputGroup.style.display = 'flex';
-            addSystemMessage(isAdmin ? '管理员登录成功' : `你的QQ号: ${userQQ}`);
-            
-            // 添加欢迎消息
-            const welcomeMsg = document.createElement('div');
-            welcomeMsg.className = 'welcome-message';
-            welcomeMsg.textContent = '欢迎使用小桃妹~桃妹的原型是胡桃，直接与我对话是用大模型对话哦，可能会慢一点，请稍等就好，更多机器人功能请输入#帮助';
-            messageArea.appendChild(welcomeMsg);
-            
-            // 连接WebSocket
-            connectWebSocket();
-        });
+                
+                function stopDragging() {
+                    isDragging = false;
+                    document.removeEventListener('mousemove', handleDragMove);
+                    document.removeEventListener('mouseup', stopDragging);
+                }
+                
+                document.addEventListener('mousemove', handleDragMove);
+                document.addEventListener('mouseup', stopDragging);
+            });
+        }
         
-        sendButton.addEventListener('click', sendMessage);
-        messageInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
-        });
-        
-        addSystemMessage('请设置你的QQ号以开始聊天<br/>请不要担心，QQ号仅作为沟通唯一标识符<br/>因此不需要密码。');
+        // 初始化调整大小功能
         initResize();
+        
+        // 初始化聊天系统
+        initializeUser();
     }
     
-    initChatSystem(config);
+    // 初始化聊天系统
+    initChatSystem();
 });
