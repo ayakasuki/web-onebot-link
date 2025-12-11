@@ -17,11 +17,11 @@
 }
 
 [data-theme=light] .login-button {
-    background: var(--btn-bg) !important;
+    background: var(--anzhiyu-main) !important;
 }
 
 [data-theme=light] .send-button {
-    background: var(--btn-bg) !important;
+    background: var(--anzhiyu-main) !important;
     color: #ffffff;
 }
 
@@ -29,7 +29,7 @@
     background: rgba(255, 255, 255, 0.9)!important;
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
-    color: var(--btn-bg);
+    color: var(--anzhiyu-main);
 }
 
 
@@ -57,11 +57,11 @@
 }
 
 [data-theme=dark] .login-button {
-    background: var(--btn-color) !important;
+    background: var(--anzhiyu-main) !important;
 }
 
 [data-theme=dark] .welcome-message {
-    color: var(--btn-color) !important;
+    color: var(--anzhiyu-main) !important;
 }
 
 [data-theme=dark] .input-group {
@@ -76,7 +76,7 @@
 }
 
 [data-theme=dark] .send-button{
-    background: var(--btn-color) !important;
+    background: var(--anzhiyu-main) !important;
     color: #ffffff;
 }
 
@@ -90,7 +90,7 @@
     background: rgba(75, 79, 80, 0.9)!important;
     -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
-    color: var(--btn-color);
+    color: var(--anzhiyu-main);
 }
 
 [data-theme=dark] .bubble-.bubble-tip::after {
